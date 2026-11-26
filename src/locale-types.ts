@@ -50,6 +50,7 @@ export interface WebCopy {
   origin: string
   starting: string
   missingTask: string
+  noProject: string
   badModel: string
   unavailable: string
 }

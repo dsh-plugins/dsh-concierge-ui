@@ -175,7 +175,10 @@ async function streamView(
   try {
     const initial = await core.view(owner)
     if (!received) emit(initial)
-  } catch {
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'NO_PROJECT') {
+      response.write('event: no-project\ndata: {}\n\n')
+    }
     response.end()
   }
 }
@@ -185,6 +188,7 @@ export function createRoutes(
   javascript: string,
   componentCss = '',
   hostPreference: () => string | undefined = () => undefined,
+  integrated = false,
 ): WebRoute[] {
   const css = componentCss + '\n' + stylesheet
   const handler: WebRoute['handler'] = async (req, res, peer) => {
@@ -214,7 +218,7 @@ export function createRoutes(
               "style-src 'self'", `style-src 'self' 'nonce-${nonce}'; style-src-attr 'unsafe-inline'`,
             ),
           })
-          res.end(req.method === 'HEAD' ? undefined : documentHtml(nonce, language))
+          res.end(req.method === 'HEAD' ? undefined : documentHtml(nonce, language, integrated))
           return
         }
         const isScript = path === '/prism/browser.js'
@@ -263,34 +267,39 @@ export function createRoutes(
       const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined
       if (error instanceof RequestError) reply(res, error.status, { error: copy[error.key] })
       else if (code === 'NOT_FOUND') reply(res, 404, { error: copy.missingTask })
+      else if (code === 'NO_PROJECT') reply(res, 409, { error: copy.noProject })
       else if (code === 'INVALID_INPUT') reply(res, 400, { error: copy.badModel })
       else reply(res, 503, { error: copy.unavailable })
     }
   }
-  return [...publicPaths].map((path) => ({ path, kind: 'exact', auth: 'required', handler }))
+  return [...publicPaths].filter(path => !integrated || path !== '/index.html').map((path) => ({ path, kind: 'exact', auth: 'required', handler }))
 }
 
-export async function apply(ctx: Context) {
+export interface Config { integrated?: boolean }
+
+export async function apply(ctx: Context, config: Config = {}) {
   // The native remote-connection plugin owns the exact root. Preserve the token
   // exchange there and send the resulting authenticated navigation to our page.
-  ctx.on(
-    'webserver/request',
-    async (req, res, next) => {
-      const url = new URL(req.url ?? '/', 'http://dsh.invalid')
-      if (url.pathname !== '/' || (req.method === 'GET' && url.searchParams.has('token'))) {
-        await next()
-        return
-      }
-      if (req.method !== 'GET' && req.method !== 'HEAD') {
-        reply(res, 405, {}, { Allow: 'GET, HEAD' })
-        return
-      }
-      res.writeHead(303, { ...securityHeaders, Location: '/prism' })
-      res.end()
-    },
-    { prepend: true },
-  )
-  ctx.on('webserver/authorize', restrictPublicSurface, { prepend: true })
+  if (!config.integrated) {
+    ctx.on(
+      'webserver/request',
+      async (req, res, next) => {
+        const url = new URL(req.url ?? '/', 'http://dsh.invalid')
+        if (url.pathname !== '/' || (req.method === 'GET' && url.searchParams.has('token'))) {
+          await next()
+          return
+        }
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+          reply(res, 405, {}, { Allow: 'GET, HEAD' })
+          return
+        }
+        res.writeHead(303, { ...securityHeaders, Location: '/prism' })
+        res.end()
+      },
+      { prepend: true },
+    )
+    ctx.on('webserver/authorize', restrictPublicSurface, { prepend: true })
+  }
   const [js, css] = await Promise.all([
     readFile(new URL('./client/prism.js', import.meta.url), 'utf8'),
     readFile(new URL('./client/prism.css', import.meta.url), 'utf8'),
@@ -307,7 +316,7 @@ export async function apply(ctx: Context) {
     }
     return preference ?? undefined
   }
-  for (const route of createRoutes(() => ctx.get('prism') as ConversationService | undefined, js, css, hostPreference)) {
+  for (const route of createRoutes(() => ctx.get('prism') as ConversationService | undefined, js, css, hostPreference, config.integrated)) {
     ctx.effect(() => ctx.webServer.register(route), `concierge ${route.path}`)
   }
 }

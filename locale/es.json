@@ -55,6 +55,7 @@
     "origin": "No se pudo verificar el origen de la solicitud.",
     "starting": "El orquestador se está iniciando.",
     "missingTask": "No se encontró la tarea.",
+    "noProject": "Añade un proyecto autorizado en Ajustes de DSH → Prism antes de enviar un mensaje.",
     "badModel": "Mensaje o modelo no válidos.",
     "unavailable": "Servicio no disponible. Inténtalo de nuevo."
   }

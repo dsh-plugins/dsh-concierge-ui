@@ -19,6 +19,7 @@ function Concierge() {
   const [connection, setConnection] = useState<Connection>('connecting')
   const [operation, setOperation] = useState<Operation>()
   const [error, setError] = useState('')
+  const [needsProject, setNeedsProject] = useState(false)
   const revision = useRef(0)
   const writing = useRef(false)
 
@@ -41,7 +42,11 @@ function Concierge() {
         revision.current++
         setView(JSON.parse(event.data) as ConversationView)
         setConnection('online')
+        setNeedsProject(false)
       }
+      source.addEventListener('no-project', () => {
+        if (source === events) setNeedsProject(true)
+      })
       source.onerror = () => {
         if (source !== events) return
         setConnection('reconnecting')
@@ -89,7 +94,7 @@ function Concierge() {
   }
 
   const empty = !view?.messages.length && !view?.tasks.length
-  const feedback = error || (connection === 'connecting' ? copy.connecting
+  const feedback = error || (needsProject ? copy.noProject : connection === 'connecting' ? copy.connecting
     : connection === 'reconnecting' ? copy.reconnecting
     : operation === 'send' ? copy.sending
     : operation === 'select' ? copy.switching : '')
@@ -98,6 +103,7 @@ function Concierge() {
     <DshProvider>
       <header className="topbar">
         <div className="brand"><PrismMark /><span>{copy.brand}</span>{copy.brand !== 'Prism' && <span className="brand-en" lang="en">Prism</span>}</div>
+        {document.getElementById('root')?.dataset.integrated === 'true' && <a className="dsh-home" href="/">DeepSeek Harness</a>}
       </header>
       <main id="main" className={empty ? 'empty' : undefined}>
         {empty ? (

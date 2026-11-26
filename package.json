@@ -1,6 +1,6 @@
 {
   "name": "@dsh-prism/dsh-concierge-ui",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,7 +10,9 @@
       "import": "./dist/index.js"
     },
     "./locale/*.json": "./locale/*.json",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./client": "./dist/client/dsh.js"
   },
   "files": [
     "dist/",
@@ -19,7 +21,8 @@
     "!dist/*probe.*",
     "locale/*.json",
     "icon.svg",
-    "README.zh_CN.md"
+    "README.zh_CN.md",
+    "cordis.patch.yml"
   ],
   "engines": {
     "node": ">=24.9.0",
@@ -31,7 +34,7 @@
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.2.0-alpha.1",
     "@deepseek-ai/dsh-host-webserver": "0.2.3-alpha.2",
-    "@dsh-prism/dsh-orchestrator": "0.1.0",
+    "@dsh-prism/dsh-orchestrator": "^0.1.1",
     "@deepseek-ai/dsh-settings": "0.2.3-alpha.2"
   },
   "scripts": {
@@ -52,10 +55,27 @@
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",
     "esbuild": "0.28.2",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.3-alpha.2",
+    "@deepseek-ai/dsh-client-ui-sidebar": "0.2.3-alpha.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.3-alpha.2",
+    "@deepseek-ai/dsh-client-locale": "0.2.3-alpha.2"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dsh-plugins/dsh-concierge-ui.git"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
   }
 }

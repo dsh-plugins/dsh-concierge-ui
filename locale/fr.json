@@ -55,6 +55,7 @@
     "origin": "L’origine de la requête n’a pas pu être vérifiée.",
     "starting": "L’orchestrateur démarre.",
     "missingTask": "Tâche introuvable.",
+    "noProject": "Ajoutez un projet autorisé dans les paramètres DSH → Prism avant d’envoyer un message.",
     "badModel": "Message ou modèle non valide.",
     "unavailable": "Service indisponible. Veuillez réessayer."
   }

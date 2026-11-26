@@ -1,6 +1,6 @@
 import { messages, type Language } from './locale.js'
 
-export function documentHtml(nonce: string, language: Language = 'en'): string {
+export function documentHtml(nonce: string, language: Language = 'en', integrated = false): string {
   const copy = messages(language)
   // Catalogs are bundled assets. Escape script delimiters even in an inert JSON block.
   const serialized = JSON.stringify(copy).replaceAll('<', '\\u003c')
@@ -17,7 +17,7 @@ export function documentHtml(nonce: string, language: Language = 'en'): string {
       <title>${copy.title}</title>
     </head>
     <body>
-      <div id="root"></div>
+      <div id="root" data-integrated="${integrated}"></div>
       <noscript>${copy.noScript}</noscript>
       <script type="application/json" id="prism-copy" nonce="${nonce}">${serialized}</script>
       <script type="module" id="prism-browser" nonce="${nonce}" src="/prism/browser.js"></script>
@@ -99,6 +99,7 @@ textarea:focus-visible {
   letter-spacing: 0.025em;
   font-size: 18px;
 }
+.dsh-home { color: var(--green); font-size: 14px; }
 .brand-en {
   font:
     normal italic 19px Georgia,
@@ -495,7 +496,8 @@ kbd {
   .brand {
     font-size: 16px;
   }
-  .brand-en {
+  .dsh-home { color: var(--green); font-size: 14px; }
+.brand-en {
     font-size: 16px;
   }
   .dock {

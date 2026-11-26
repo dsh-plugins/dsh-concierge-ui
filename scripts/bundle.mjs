@@ -25,3 +25,19 @@ await build({
     'process.env.NODE_ENV': '"production"',
   },
 })
+
+// The native DSH shell loads Cordis client plugins as named module factories.
+// Shared React must come from the shell that owns the settings and sidebar slots.
+await build({
+  absWorkingDir: root,
+  entryPoints: ['src/dsh-client.tsx'],
+  outfile: 'dist/client/dsh.js',
+  bundle: true,
+  format: 'cjs',
+  platform: 'browser',
+  target: 'es2022',
+  minify: true,
+  external: ['react', 'react/jsx-runtime'],
+  banner: { js: "window.__ModuleLoader__.load({id:'@dsh-prism/dsh-concierge-ui',factory:require=>{const module={exports:{}};const exports=module.exports;" },
+  footer: { js: 'return module.exports}});' },
+})

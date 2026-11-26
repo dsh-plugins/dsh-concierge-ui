@@ -131,3 +131,9 @@ test('Prism negotiates native DSH languages for both the browser and API errors'
   assert.equal(headers.get('Content-Language'), 'fr')
   assert.deepEqual(error, {error: messages('fr').identity})
 })
+
+test('the installed plugin keeps the DSH index and registers authenticated Prism routes only', () => {
+  const routes = createRoutes(() => undefined, '', '', () => undefined, true)
+  assert.ok(routes.some(route => route.path === '/prism'))
+  assert.ok(routes.every(route => route.path.startsWith('/prism') && route.auth === 'required'))
+})

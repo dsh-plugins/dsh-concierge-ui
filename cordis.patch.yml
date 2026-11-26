@@ -1,0 +1,5 @@
+- insert:
+    - id: dsh-concierge-ui
+      name: '@dsh-prism/dsh-concierge-ui'
+      config:
+        integrated: true
