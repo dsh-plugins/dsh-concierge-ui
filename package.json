@@ -35,20 +35,27 @@
     "@deepseek-ai/dsh-settings": "0.2.3-alpha.2"
   },
   "scripts": {
-    "build": "tsc -b && npm run bundle",
-    "bundle": "node scripts/bundle.mjs"
+    "build": "tsc -b tsconfig.release.json && npm run bundle",
+    "bundle": "node scripts/bundle.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@arco-design/web-react": "2.66.18",
     "@deepseek-ai/dsh-client-ui-theme": "0.2.3-alpha.2",
     "@dsh-plugin/dsh-loader": "2.0.0-dev.45752173879",
-    "@dsh-plugin/dsh-ui-components": "next",
+    "@dsh-plugin/dsh-ui-components": "0.1.0-dev.45544484650",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@types/node": "24.10.1",
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dsh-plugins/dsh-concierge-ui.git"
   }
 }
