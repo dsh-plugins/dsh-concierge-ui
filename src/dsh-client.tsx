@@ -5,6 +5,8 @@ import type { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type { ConfigForm, ConfigForms } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { settingsCopy } from './settings-copy.js'
+import { ImSettings } from './ImSettings.js'
+import { imCopy } from './im-copy.js'
 
 interface Project {
   id: string
@@ -167,7 +169,18 @@ export function apply(ctx: BrowserContext) {
     const language = useSyncExternalStore(listener => ctx.locale.subscribe(listener), () => ctx.locale.getSnapshot().active)
     return settingsCopy(language)
   }
-  function PrismSettings() { return <Settings form={form} copy={useCopy()} /> }
+  function PrismSettings() {
+    const [section, setSection] = useState<'projects' | 'im'>('projects')
+    const language = useSyncExternalStore(listener => ctx.locale.subscribe(listener), () => ctx.locale.getSnapshot().active)
+    const projects = settingsCopy(language), im = imCopy(language)
+    return <div style={stack}>
+      <nav style={row}>
+        <button type="button" style={button} aria-pressed={section === 'projects'} onClick={() => setSection('projects')}>{projects.projects}</button>
+        <button type="button" style={button} aria-pressed={section === 'im'} onClick={() => setSection('im')}>{im.title}</button>
+      </nav>
+      {section === 'projects' ? <Settings form={form} copy={projects} /> : <ImSettings copy={im} />}
+    </div>
+  }
   function PrismLink() {
     const copy = useCopy()
     return <a href="/prism" title={copy.open} style={{ padding: '5px 8px', color: 'inherit' }}>{copy.title}</a>

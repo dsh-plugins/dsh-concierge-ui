@@ -10,7 +10,13 @@ English | [简体中文](README.zh_CN.md)
 
 </div>
 
-## Set up Prism
+## Install in the DSH web app
+
+Open **Plugins → Add plugin** and install and enable the five `@dsh-prism` packages in the order shown in the guide. To install this package, enter `@dsh-prism/dsh-concierge-ui@0.1.1`. [Illustrated installation guide](https://prism.dsh-plug.in/guide/start)
+
+Add your model provider in **Settings → Models** and select the model in a workspace. Under **Settings → Prism**, add project folders and choose which tools their agents may use. Open Prism to send a request across projects. Expand a task card to follow progress or inspect its executor’s read-only session. [Two-project walkthrough](https://prism.dsh-plug.in/guide/start)
+
+## Run the standalone host from source
 
 Use Node.js 24.9 or later, npm, Git and credentials with read access to the five private plugin repositories. The checkout script places matching plugins and launcher files in a local `runtime/` directory. Run subsequent installation, configuration and launch commands there. The public guide is available without signing in. To use the example models, configure your DeepSeek credentials in DSH or set the `DEEPSEEK_API_KEY` environment variable. [Installation guide](https://prism.dsh-plug.in/)
 
