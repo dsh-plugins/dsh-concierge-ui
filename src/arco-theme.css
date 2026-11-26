@@ -1,0 +1,14 @@
+/* The official standalone preview's Arco baseline and DSH token sheets, in cascade order. */
+@import '@arco-design/web-react/dist/css/arco.min.css';
+@import '@deepseek-ai/dsh-client-ui-theme/src/styles/base.css';
+@import '@deepseek-ai/dsh-client-ui-theme/src/styles/design-platform.css';
+@import '@deepseek-ai/dsh-client-ui-theme/src/styles/gradient-shadow-text.css';
+@import '@deepseek-ai/dsh-client-ui-theme/src/styles/focus.css';
+@import '@deepseek-ai/dsh-client-ui-theme/src/styles/corner-shape.css';
+
+.prism-host-scrollbar {
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
