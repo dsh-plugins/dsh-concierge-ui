@@ -1,3 +1,6 @@
+import { messages, selectLanguage } from './locale.js'
+import type {} from '@deepseek-ai/dsh-settings'
+import type { WebCopy } from './locale-types.js'
 import { randomBytes } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -20,6 +23,7 @@ interface ConversationService {
 
 const pages = new Set(['/index.html', '/prism', '/prism/'])
 const api = '/prism/api'
+const signedCallbacks = new Set(['/prism/mesh/v1', '/prism/im/onebot', '/prism/im/qq'])
 const publicPaths = new Set([
   ...pages,
   '/prism/browser.js',
@@ -35,7 +39,7 @@ export function restrictPublicSurface(request: WebAuthRequest): WebAdmission | u
   const path = request.url.pathname
   if (
     request.transport === 'http' &&
-    (path === '/' || publicPaths.has(path) || (path === '/prism/mesh/v1' && request.method === 'POST'))
+    (path === '/' || publicPaths.has(path) || (request.method === 'POST' && signedCallbacks.has(path)))
   )
     return
   return { kind: 'deny', status: 403 }
@@ -57,15 +61,15 @@ function reply(res: ServerResponse, status: number, body: unknown, headers: Reco
 class RequestError extends Error {
   constructor(
     readonly status: number,
-    message: string,
+    readonly key: keyof WebCopy,
   ) {
-    super(message)
+    super(key)
   }
 }
 
 async function readBody(request: IncomingMessage): Promise<Record<string, unknown>> {
   if (request.headers['content-type']?.split(';')[0]?.trim() !== 'application/json')
-    throw new RequestError(415, '请使用 JSON 提交请求。')
+    throw new RequestError(415, 'json')
   const chunks: Buffer[] = []
   let bytes = 0
   for await (const chunk of request.iterator({ destroyOnReturn: false })) {
@@ -73,7 +77,7 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
     bytes += data.length
     if (bytes > 256 * 1024) {
       request.resume()
-      throw new RequestError(413, '消息过长，请分段发送。')
+      throw new RequestError(413, 'tooLong')
     }
     chunks.push(data)
   }
@@ -81,21 +85,21 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
   try {
     value = JSON.parse(Buffer.concat(chunks).toString('utf8'))
   } catch {
-    throw new RequestError(400, '请求格式无效。')
+    throw new RequestError(400, 'format')
   }
   if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new RequestError(400, '请求格式无效。')
+    throw new RequestError(400, 'format')
   return value as Record<string, unknown>
 }
 
 function requiredString(value: unknown, limit: number): string {
   if (typeof value !== 'string' || !value.trim() || value.length > limit)
-    throw new RequestError(400, '消息或选项无效。')
+    throw new RequestError(400, 'invalidOption')
   return value.trim()
 }
 
 /** Serialize only the channel contract, even if a host adds private fields to its view. */
-function project(view: ConversationView): ConversationView {
+function project(view: ConversationView, copy: WebCopy): ConversationView {
   return {
     modelId: view.modelId,
     models: view.models.map(({ id, description }) => ({ id, description })),
@@ -108,7 +112,7 @@ function project(view: ConversationView): ConversationView {
     })),
     tasks: view.tasks.map(({ id, title, status, at, parentId }) => ({
       id,
-      title,
+      title: parentId ? copy.step : title,
       status,
       at,
       ...(parentId ? { parentId } : {}),
@@ -121,6 +125,7 @@ async function streamView(
   owner: string,
   response: ServerResponse,
   signal: AbortSignal,
+  copy: WebCopy,
 ) {
   response.writeHead(200, {
     ...securityHeaders,
@@ -138,7 +143,7 @@ async function streamView(
       latest = view
       return
     }
-    paused = !response.write(`data: ${JSON.stringify(project(view))}\n\n`)
+    paused = !response.write(`data: ${JSON.stringify(project(view, copy))}\n\n`)
   }
   const drain = () => {
     paused = false
@@ -179,11 +184,16 @@ export function createRoutes(
   getService: () => ConversationService | undefined,
   javascript: string,
   componentCss = '',
+  hostPreference: () => string | undefined = () => undefined,
 ): WebRoute[] {
   const css = componentCss + '\n' + stylesheet
   const handler: WebRoute['handler'] = async (req, res, peer) => {
+    const language = selectLanguage(req.headers['accept-language'], hostPreference())
+    const copy = messages(language)
+    res.setHeader('Content-Language', language)
+    res.setHeader('Vary', 'Accept-Language')
     if (!peer || peer.signal.aborted || peer.principal.kind !== 'owner') {
-      reply(res, 403, { error: '需要有效的用户身份。' })
+      reply(res, 403, { error: copy.identity })
       return
     }
     const owner = 'web:owner'
@@ -204,7 +214,7 @@ export function createRoutes(
               "style-src 'self'", `style-src 'self' 'nonce-${nonce}'; style-src-attr 'unsafe-inline'`,
             ),
           })
-          res.end(req.method === 'HEAD' ? undefined : documentHtml(nonce))
+          res.end(req.method === 'HEAD' ? undefined : documentHtml(nonce, language))
           return
         }
         const isScript = path === '/prism/browser.js'
@@ -219,11 +229,11 @@ export function createRoutes(
         reply(res, 405, {}, { Allow: method })
         return
       }
-      if (write && req.headers['x-prism-request'] !== '1') throw new RequestError(403, '无法确认请求来源。')
+      if (write && req.headers['x-prism-request'] !== '1') throw new RequestError(403, 'origin')
       const core = getService()
-      if (!core) throw new RequestError(503, '协调服务正在启动。')
+      if (!core) throw new RequestError(503, 'starting')
       if (path === `${api}/events`) {
-        await streamView(core, owner, res, peer.signal)
+        await streamView(core, owner, res, peer.signal, copy)
         return
       }
       if (path === `${api}/trace`) {
@@ -236,7 +246,7 @@ export function createRoutes(
         return
       }
       if (!write) {
-        reply(res, 200, project(await core.view(owner)))
+        reply(res, 200, project(await core.view(owner), copy))
         return
       }
       const body = await readBody(req)
@@ -244,17 +254,17 @@ export function createRoutes(
         path === `${api}/model`
           ? await core.selectModel(owner, requiredString(body.modelId, 256))
           : await core.message(owner, requiredString(body.text, 32000), requiredString(body.requestId, 128))
-      reply(res, 200, project(view))
+      reply(res, 200, project(view, copy))
     } catch (error) {
       if (res.headersSent) {
         res.end()
         return
       }
       const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined
-      if (error instanceof RequestError) reply(res, error.status, { error: error.message })
-      else if (code === 'NOT_FOUND') reply(res, 404, { error: '找不到这项任务。' })
-      else if (code === 'INVALID_INPUT') reply(res, 400, { error: '消息或模型无效。' })
-      else reply(res, 503, { error: '服务暂时不可用，请重试。' })
+      if (error instanceof RequestError) reply(res, error.status, { error: copy[error.key] })
+      else if (code === 'NOT_FOUND') reply(res, 404, { error: copy.missingTask })
+      else if (code === 'INVALID_INPUT') reply(res, 400, { error: copy.badModel })
+      else reply(res, 503, { error: copy.unavailable })
     }
   }
   return [...publicPaths].map((path) => ({ path, kind: 'exact', auth: 'required', handler }))
@@ -285,7 +295,19 @@ export async function apply(ctx: Context) {
     readFile(new URL('./client/prism.js', import.meta.url), 'utf8'),
     readFile(new URL('./client/prism.css', import.meta.url), 'utf8'),
   ])
-  for (const route of createRoutes(() => ctx.get('prism') as ConversationService | undefined, js, css)) {
+  // Read DSH's live locale preference once per settings revision. Standalone hosts
+  // without the settings service negotiate each request through Accept-Language.
+  let preference: string | null | undefined
+  ctx.on('settings/document-updated', ns => { if (ns === 'locale') preference = undefined })
+  const hostPreference = () => {
+    if (preference === undefined) {
+      const form = ctx.get('settings')?.describe({ redactSecrets: true }).find(entry => entry.ns === 'locale')
+      const value = (form?.value as { preference?: unknown } | undefined)?.preference
+      preference = typeof value === 'string' ? value : null
+    }
+    return preference ?? undefined
+  }
+  for (const route of createRoutes(() => ctx.get('prism') as ConversationService | undefined, js, css, hostPreference)) {
     ctx.effect(() => ctx.webServer.register(route), `concierge ${route.path}`)
   }
 }

@@ -1,16 +1,17 @@
+import { copy } from './client-locale.js'
 import type { ConversationView } from '@dsh-prism/dsh-orchestrator/contracts'
 
 export const api = '/prism/api'
 
 export function describe(error: unknown): string {
-  return error instanceof Error ? error.message : '连接失败，请重试。'
+  return error instanceof Error ? error.message : copy.offline
 }
 
 export async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(api + path, { credentials: 'same-origin', ...options })
   if (!response.ok) {
     const result = await response.json().catch(() => null)
-    throw new Error(typeof result?.error === 'string' ? result.error : `请求失败（${response.status}）。`)
+    throw new Error(typeof result?.error === 'string' ? result.error : copy.requestFailed.replace('{status}', String(response.status)))
   }
   return response.json() as Promise<T>
 }

@@ -1,3 +1,4 @@
+import { copy } from './client-locale.js'
 import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { DshProvider } from '@dsh-plugin/dsh-ui-components'
@@ -68,7 +69,7 @@ function Concierge() {
   }, [])
 
   async function submit(kind: Operation, body: object): Promise<void> {
-    if (writing.current || connection !== 'online') throw new Error('请稍后再试。')
+    if (writing.current || connection !== 'online') throw new Error(copy.later)
     writing.current = true
     setOperation(kind)
     setError('')
@@ -88,24 +89,24 @@ function Concierge() {
   }
 
   const empty = !view?.messages.length && !view?.tasks.length
-  const feedback = error || (connection === 'connecting' ? '正在连接…'
-    : connection === 'reconnecting' ? '连接已中断，正在重连…'
-    : operation === 'send' ? '正在发送…'
-    : operation === 'select' ? '正在切换模型…' : '')
+  const feedback = error || (connection === 'connecting' ? copy.connecting
+    : connection === 'reconnecting' ? copy.reconnecting
+    : operation === 'send' ? copy.sending
+    : operation === 'select' ? copy.switching : '')
 
   return (
     <DshProvider>
       <header className="topbar">
-        <div className="brand"><PrismMark /><span>棱镜</span><span className="brand-en" lang="en">Prism</span></div>
+        <div className="brand"><PrismMark /><span>{copy.brand}</span>{copy.brand !== 'Prism' && <span className="brand-en" lang="en">Prism</span>}</div>
       </header>
       <main id="main" className={empty ? 'empty' : undefined}>
         {empty ? (
           <section id="welcome" aria-labelledby="welcome-title">
             <div className="hero-symbol"><PrismMark /></div>
-            <h1 id="welcome-title">今天想推进什么？</h1>
+            <h1 id="welcome-title">{copy.welcome}</h1>
           </section>
         ) : (
-          <section id="thread" aria-label="对话记录">
+          <section id="thread" aria-label={copy.chat}>
             {view && <Timeline view={view} />}
           </section>
         )}
@@ -123,5 +124,5 @@ function Concierge() {
 }
 
 const root = document.getElementById('root')
-if (!root) throw new Error('缺少对话界面挂载点。')
+if (!root) throw new Error('Missing #root mount point')
 createRoot(root).render(<Concierge />)

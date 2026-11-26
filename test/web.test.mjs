@@ -22,11 +22,16 @@ function state() {
   }
 }
 
-test('public web gate allows concierge and authenticated Mesh route only', () => {
+test('public web gate allows concierge and exact authenticated callback routes', () => {
   const decide = (path, method = 'GET', transport = 'http') =>
     restrictPublicSurface({ url: new URL(path, 'http://test.invalid'), headers: {}, method, transport })
   for (const path of ['/', '/prism/browser.js', '/prism/api/events']) assert.equal(decide(path), undefined)
-  assert.equal(decide('/prism/mesh/v1', 'POST'), undefined)
+  for (const path of ['/prism/mesh/v1', '/prism/im/onebot', '/prism/im/qq']) {
+    assert.equal(decide(path, 'POST'), undefined)
+    assert.equal(decide(path, 'GET').status, 403)
+    assert.equal(decide(path + '/', 'POST').status, 403)
+    assert.equal(decide(path, 'POST', 'upgrade').status, 403)
+  }
   for (const path of [
     '/assets/index.js',
     '/connect',
@@ -98,4 +103,31 @@ test('channel endpoints restrict identity, writable methods and output fields', 
   )
   assert.equal((await fetch(base + '/message', { method: 'POST', headers, body })).status, 200)
   assert.deepEqual(calls, [['web:owner', '你好', 'request-1']])
+})
+
+test('Prism negotiates native DSH languages for both the browser and API errors', async () => {
+  const { languages, messages, selectLanguage } = await import('../dist/locale.js')
+  const { documentHtml } = await import('../dist/page.js')
+  assert.equal(selectLanguage('zh-TW;q=0.5,de-DE;q=0.9'), 'de')
+  assert.equal(selectLanguage('fr-CA', 'ja-JP'), 'ja')
+  assert.equal(selectLanguage('pt-BR', 'unsupported'), 'pt')
+  assert.equal(selectLanguage('xx,zh;q=0'), 'en')
+  const keys = Object.keys(messages('en')).sort()
+  for (const language of languages) {
+    const copy = messages(language)
+    assert.deepEqual(Object.keys(copy).sort(), keys)
+    const html = documentHtml('nonce', language)
+    assert.ok(html.includes(`<html lang="${language}">`))
+    assert.ok(html.includes(`<title>${copy.title}</title>`))
+    const payload = JSON.parse(/id="prism-copy"[^>]*>([^<]*)<\/script>/.exec(html)[1])
+    assert.equal(payload.welcome, copy.welcome)
+    assert.equal(payload.currentModel.split('{model}').length, 2)
+  }
+  const route = createRoutes(() => undefined, '').find(route => route.path === '/prism/api/view')
+  const headers = new Map()
+  let error
+  const res = { setHeader: (key, value) => headers.set(key, value), writeHead: () => {}, end: data => { error = JSON.parse(data) } }
+  await route.handler({method:'GET', url:'/prism/api/view', headers:{'accept-language':'fr-CA'}}, res)
+  assert.equal(headers.get('Content-Language'), 'fr')
+  assert.deepEqual(error, {error: messages('fr').identity})
 })

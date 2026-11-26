@@ -1,18 +1,25 @@
-export function documentHtml(nonce: string): string {
+import { messages, type Language } from './locale.js'
+
+export function documentHtml(nonce: string, language: Language = 'en'): string {
+  const copy = messages(language)
+  // Catalogs are bundled assets. Escape script delimiters even in an inert JSON block.
+  const serialized = JSON.stringify(copy).replaceAll('<', '\\u003c')
+
   return /* HTML */ `
   <!doctype html>
-  <html lang="zh-CN">
+  <html lang="${language}">
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
       <meta name="theme-color" content="#fafbf8" />
       <link rel="icon" href="data:," />
       <link rel="stylesheet" href="/prism/style.css" />
-      <title>棱镜 · 对话</title>
+      <title>${copy.title}</title>
     </head>
     <body>
       <div id="root"></div>
-      <noscript>请启用 JavaScript 以使用棱镜对话。</noscript>
+      <noscript>${copy.noScript}</noscript>
+      <script type="application/json" id="prism-copy" nonce="${nonce}">${serialized}</script>
       <script type="module" id="prism-browser" nonce="${nonce}" src="/prism/browser.js"></script>
     </body>
   </html>

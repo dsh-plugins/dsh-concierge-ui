@@ -1,3 +1,4 @@
+import { copy } from './client-locale.js'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Button, Icon, IconButton, Popover, Textarea, type TextareaRef } from '@dsh-plugin/dsh-ui-components'
 import type { ConversationView } from '@dsh-prism/dsh-orchestrator/contracts'
@@ -117,7 +118,7 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
 
   const choices = (
     <div id="model-menu" ref={menu} onKeyDown={navigate}>
-      <h2 id="model-heading">对话模型</h2>
+      <h2 id="model-heading">{copy.models}</h2>
       <div id="models" role="listbox" aria-labelledby="model-heading">
         {view?.models.map((model) => (
           <Button
@@ -143,7 +144,7 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
   )
 
   return (
-    <section className="dock" aria-label="发送消息">
+    <section className="dock" aria-label={copy.sendMessage}>
       <div className="dock-inner">
         <form
           id="composer"
@@ -153,14 +154,14 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
           }}
         >
           <label className="sr-only" htmlFor="draft">
-            消息
+            {copy.message}
           </label>
           <Textarea
             id="draft"
             ref={input}
             rows={2}
             maxLength={32000}
-            placeholder="给棱镜发消息…"
+            placeholder={copy.placeholder}
             value={draft}
             onChange={(value: string) => {
               setDraft(value)
@@ -180,7 +181,7 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
           />
           <div className="composer-foot">
             <span className="key-hint">
-              <kbd>Enter</kbd> 发送 <span>·</span> <kbd>Shift + Enter</kbd> 换行
+              <kbd>Enter</kbd> {copy.send} <span>·</span> <kbd>Shift + Enter</kbd> {copy.newline}
             </span>
             <div className="models">
               <Popover
@@ -201,7 +202,7 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
                   aria-haspopup="listbox"
                   aria-expanded={open}
                   aria-controls={open ? 'models' : undefined}
-                  aria-label={`切换对话模型，当前模型 ${view?.modelId ?? '尚未加载'}`}
+                  aria-label={copy.currentModel.replace('{model}', () => view?.modelId ?? copy.notLoaded)}
                   onKeyDown={(event) => {
                     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                       event.preventDefault()
@@ -210,14 +211,14 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
                   }}
                 >
                   <Icon name="Diamond" size={14} aria-hidden="true" />
-                  <span id="model-name">{view?.modelId ?? '选择模型'}</span>
+                  <span id="model-name">{view?.modelId ?? copy.chooseModel}</span>
                   <Icon name={open ? 'ChevronDown' : 'ChevronUp'} size={13} aria-hidden="true" />
                 </Button>
               </Popover>
             </div>
             <IconButton
               id="send"
-              label="发送消息"
+              label={copy.sendMessage}
               htmlType="submit"
               variant="primary"
               shape="circle"

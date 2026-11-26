@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Concierge</title>
+  <desc id="desc">Conversation bubble with a triangular prism inside.</desc>
+  <defs><linearGradient id="ground" x2="1" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#214F42"/><stop offset="1" stop-color="#102E2B"/></linearGradient></defs>
+  <rect x="3" y="3" width="122" height="122" rx="27" fill="url(#ground)"/>
+  <g stroke-linejoin="round" stroke-linecap="round">
+  <path fill="#AFEFCF" d="M26 33h76v53H60L38 103V86H26z"/>
+  <path fill="#216752" d="m62 42 19 30-39 2z"/><path fill="#59B38E" d="m62 42-2 23-18 9z"/><path fill="#92D6B1" d="m60 65 21 7-39 2z"/>
+  </g>
+</svg>
