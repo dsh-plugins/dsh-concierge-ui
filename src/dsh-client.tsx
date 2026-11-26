@@ -39,12 +39,45 @@ const input: CSSProperties = {
   font: 'inherit', padding: '7px 10px', width: '100%', boxSizing: 'border-box',
 }
 
+export function formatProjectPrincipals(principals: readonly string[]): string {
+  return principals.join('\n')
+}
+
+export function parseProjectPrincipals(input: string, existing: readonly string[]): string[] | undefined {
+  const lines = input.split(/\r?\n/u)
+  const principals: string[] = []
+  for (const raw of lines) {
+    if (/[\x00-\x1f\x7f]/u.test(raw)) return
+    const line = raw.trim()
+    if (!line) continue
+    // The registry matches exact strings. Preserve even a custom comma-bearing ID
+    // when reopening an existing project, including when the user adds another line.
+    if (existing.includes(raw)) principals.push(raw)
+    else if (existing.includes(line)) principals.push(line)
+    else if (line.startsWith('im:')) {
+      try {
+        const tuple: unknown = JSON.parse(line.slice(3))
+        if (!Array.isArray(tuple) || tuple.length !== 3 || !tuple.every(id => typeof id === 'string' && id.length > 0)) return
+        principals.push('im:' + JSON.stringify(tuple))
+      } catch { return }
+    } else if (lines.length === 1 && line.includes(',')) {
+      // Older versions accepted plain identities in a comma-separated field.
+      // A partial IM tuple must never turn into multiple project grants.
+      const ids = line.split(',').map(id => id.trim()).filter(Boolean)
+      if (!ids.every(id => /^[\p{L}\p{N}][\p{L}\p{N}_.:@/-]*$/u.test(id) && !id.startsWith('im:'))) return
+      principals.push(...ids)
+    } else principals.push(line)
+  }
+  if (principals.includes('*')) return
+  return [...new Set(principals)]
+}
+
 function ProjectEditor({ initial, existing, copy, save, cancel, busy }: {
   initial: Project; existing: boolean; copy: Copy; busy: boolean
   save(project: Project): Promise<void>; cancel(): void
 }) {
   const [draft, setDraft] = useState(initial)
-  const [owners, setOwners] = useState(initial.principals.join(', '))
+  const [owners, setOwners] = useState(formatProjectPrincipals(initial.principals))
   const [error, setError] = useState('')
   const textField = (key: 'id' | 'workspace' | 'description' | 'nodeId', label: string, placeholder?: string) =>
     <label style={{ ...stack, gap: 4 }}>{label}
@@ -54,15 +87,18 @@ function ProjectEditor({ initial, existing, copy, save, cancel, busy }: {
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    const principals = [...new Set(owners.split(',').map(p => p.trim()).filter(Boolean))]
+    const principals = parseProjectPrincipals(owners, initial.principals)
+    if (!principals || (!principals.length && initial.principals.length)) {
+      setError(copy.invalid)
+      return
+    }
     const project = {
       ...draft, id: draft.id.trim(), workspace: draft.workspace.trim(), nodeId: draft.nodeId.trim(),
       description: draft.description.trim() || draft.id.trim(), principals,
     }
     const key = /^[\p{L}\p{N}][\p{L}\p{N}_.-]*$/u
     if (!key.test(project.id) || !key.test(project.nodeId) ||
-        !/^(?:\/|[a-z]:[\\/]|\\\\)[^\x00-\x1f\x7f]*$/iu.test(project.workspace) ||
-        !principals.length || principals.some(p => p === '*' || /[\x00-\x1f\x7f]/.test(p))) {
+        !/^(?:\/|[a-z]:[\\/]|\\\\)[^\x00-\x1f\x7f]*$/iu.test(project.workspace)) {
       setError(copy.invalid)
       return
     }
@@ -87,7 +123,8 @@ function ProjectEditor({ initial, existing, copy, save, cancel, busy }: {
       <div style={{ ...stack, marginTop: 8 }}>
         {textField('nodeId', copy.node)}
         <label style={{ ...stack, gap: 4 }}>{copy.principals}
-          <input style={input} value={owners} required onChange={e => setOwners(e.target.value)} />
+          <textarea style={input} value={owners} rows={3} required={initial.principals.length > 0}
+            spellCheck={false} onChange={e => setOwners(e.target.value)} />
         </label>
       </div>
     </details>
