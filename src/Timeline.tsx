@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Button, Card, Modal, Tag, type TagTone } from '@dsh-plugin/dsh-ui-components'
 import type { ConversationView, PublicMessage, TaskCard, TraceEntry } from '@dsh-prism/dsh-orchestrator/contracts'
 import { describe, request } from './client-api.js'
+import { missingReply } from './delivery.js'
 
 const states: Record<TaskCard['status'], { label: string; tone: TagTone }> = {
   queued: { label: copy.queued, tone: 'neutral' },
@@ -32,8 +33,9 @@ function Message({ item }: { item: PublicMessage }) {
         <Timestamp at={item.at} />
       </span>
       <p>{item.text}</p>
-      {!assistant && item.delivery && item.delivery !== 'processed' &&
-        <span className="time">{item.delivery === 'failed' ? copy.processFailed : copy.processing}</span>}
+      {!assistant && item.delivery === 'pending' && <span className="time">{copy.processing}</span>}
+      {!assistant && item.delivery === 'failed' &&
+        <span className="time">{missingReply(item) ? copy.noResponse : copy.processFailed}</span>}
     </article>
   )
 }

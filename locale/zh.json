@@ -38,6 +38,7 @@
     "you": "你",
     "processing": "处理中…",
     "processFailed": "处理失败，可重新发送。",
+    "noResponse": "模型尚未发送答复。请在输入框发送「请汇总已有任务的结果，无需重新执行」。",
     "task": "后台任务",
     "step": "执行步骤",
     "viewSession": "查看只读会话",

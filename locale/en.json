@@ -38,6 +38,7 @@
     "you": "You",
     "processing": "Processing…",
     "processFailed": "Processing failed. You can resend the message.",
+    "noResponse": "The model did not send a reply. In the message box, ask “Summarize the existing task results without running the tasks again.”",
     "task": "Background task",
     "step": "Execution step",
     "viewSession": "View read-only session",

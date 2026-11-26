@@ -37,6 +37,7 @@
     "you": "Du",
     "processing": "Wird verarbeitet…",
     "processFailed": "Verarbeitung fehlgeschlagen. Du kannst die Nachricht erneut senden.",
+    "noResponse": "Das Modell hat keine Antwort gesendet. Schreibe in das Nachrichtenfeld „Fasse die vorhandenen Aufgabenergebnisse zusammen, ohne die Aufgaben erneut auszuführen.“",
     "task": "Hintergrundaufgabe",
     "step": "Ausführungsschritt",
     "viewSession": "Sitzung schreibgeschützt ansehen",

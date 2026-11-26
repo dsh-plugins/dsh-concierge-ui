@@ -37,6 +37,7 @@
     "you": "Vous",
     "processing": "Traitement…",
     "processFailed": "Échec du traitement. Vous pouvez renvoyer le message.",
+    "noResponse": "Le modèle n’a pas envoyé de réponse. Dans le champ de message, écrivez « Résume les résultats des tâches existantes sans les relancer. »",
     "task": "Tâche en arrière-plan",
     "step": "Étape d’exécution",
     "viewSession": "Voir la session en lecture seule",

@@ -137,3 +137,31 @@ test('the installed plugin keeps the DSH index and registers authenticated Prism
   assert.ok(routes.some(route => route.path === '/prism'))
   assert.ok(routes.every(route => route.path.startsWith('/prism') && route.auth === 'required'))
 })
+
+test('missing replies expose only the public failure code and a localized recovery instruction', async () => {
+  const { languages, messages } = await import('../dist/locale.js')
+  const view = state()
+  const message = view.messages[0]
+  view.messages = [
+    { ...message, deliveryError:'no_response' },
+    { ...message, deliveryError:'private failure detail' },
+    { ...message, role:'assistant', deliveryError:'no_response' },
+    { ...message, delivery:'processed', deliveryError:'no_response' },
+    message,
+  ]
+  const route = createRoutes(() => ({ view:async () => view }), '').find(route => route.path === '/prism/api/view')
+  let output
+  await route.handler(
+    {method:'GET', url:'/prism/api/view', headers:{}},
+    {setHeader() {}, writeHead() {}, end(data) { output = JSON.parse(data) }},
+    {principal:{kind:'owner'}, signal:new AbortController().signal},
+  )
+  assert.deepEqual(output.messages.map(m => m.deliveryError), ['no_response',undefined,undefined,undefined,undefined])
+  assert.doesNotMatch(JSON.stringify(output), /private/)
+  for (const language of languages) {
+    const copy = messages(language)
+    assert.ok(copy.noResponse && copy.noResponse !== copy.processFailed)
+  }
+  assert.match(messages('en').noResponse, /without running the tasks again/)
+  assert.match(messages('zh').noResponse, /汇总已有任务的结果/)
+})

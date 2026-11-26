@@ -37,6 +37,7 @@
     "you": "Tú",
     "processing": "Procesando…",
     "processFailed": "Falló el procesamiento. Puedes reenviar el mensaje.",
+    "noResponse": "El modelo no ha enviado una respuesta. Escribe en el cuadro de mensaje «Resume los resultados de las tareas existentes sin volver a ejecutarlas».",
     "task": "Tarea en segundo plano",
     "step": "Paso de ejecución",
     "viewSession": "Ver sesión de solo lectura",

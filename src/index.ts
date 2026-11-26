@@ -8,6 +8,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { WebAuthRequest, WebAdmission, WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { ConversationView, TraceEntry } from '@dsh-prism/dsh-orchestrator/core'
 import { documentHtml, stylesheet } from './page.js'
+import { missingReply } from './delivery.js'
 
 export const name = 'dsh-concierge-ui'
 export const inject = ['webServer']
@@ -103,12 +104,13 @@ function project(view: ConversationView, copy: WebCopy): ConversationView {
   return {
     modelId: view.modelId,
     models: view.models.map(({ id, description }) => ({ id, description })),
-    messages: view.messages.map(({ id, role, text, at, delivery }) => ({
-      id,
-      role,
-      text,
-      at,
-      ...(delivery ? { delivery } : {}),
+    messages: view.messages.map(message => ({
+      id: message.id,
+      role: message.role,
+      text: message.text,
+      at: message.at,
+      ...(message.delivery ? { delivery: message.delivery } : {}),
+      ...(missingReply(message) ? { deliveryError: 'no_response' as const } : {}),
     })),
     tasks: view.tasks.map(({ id, title, status, at, parentId }) => ({
       id,

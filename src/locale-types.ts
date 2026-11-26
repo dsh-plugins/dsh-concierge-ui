@@ -32,6 +32,7 @@ export interface WebCopy {
   you: string
   processing: string
   processFailed: string
+  noResponse: string
   task: string
   step: string
   viewSession: string

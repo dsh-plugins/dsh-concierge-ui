@@ -37,6 +37,7 @@
     "you": "Você",
     "processing": "Processando…",
     "processFailed": "Falha no processamento. Você pode reenviar a mensagem.",
+    "noResponse": "O modelo não enviou uma resposta. No campo de mensagem, peça “Resuma os resultados das tarefas existentes sem executá-las novamente”.",
     "task": "Tarefa em segundo plano",
     "step": "Etapa de execução",
     "viewSession": "Ver sessão somente leitura",
