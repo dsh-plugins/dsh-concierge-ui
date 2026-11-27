@@ -202,31 +202,31 @@ interface BrowserContext {
 }
 export function apply(ctx: BrowserContext) {
   const form = ctx.configForms.get<ProjectSettings>('dsh-workspace-registry')
-  function useCopy() {
-    const language = useSyncExternalStore(listener => ctx.locale.subscribe(listener), () => ctx.locale.getSnapshot().active)
-    return settingsCopy(language)
+  function useLanguage() {
+    return useSyncExternalStore(listener => ctx.locale.subscribe(listener), () => ctx.locale.getSnapshot().active)
   }
   function PrismSettings() {
-    const [section, setSection] = useState<'projects' | 'im'>('projects')
-    const language = useSyncExternalStore(listener => ctx.locale.subscribe(listener), () => ctx.locale.getSnapshot().active)
-    const projects = settingsCopy(language), im = imCopy(language)
-    return <div style={stack}>
-      <nav style={row}>
-        <button type="button" style={button} aria-pressed={section === 'projects'} onClick={() => setSection('projects')}>{projects.projects}</button>
-        <button type="button" style={button} aria-pressed={section === 'im'} onClick={() => setSection('im')}>{im.title}</button>
-      </nav>
-      {section === 'projects' ? <Settings form={form} copy={projects} /> : <ImSettings copy={im} />}
-    </div>
+    return <Settings form={form} copy={settingsCopy(useLanguage())} />
+  }
+  function PrismIm() {
+    return <ImSettings copy={imCopy(useLanguage())} />
   }
   function PrismButton() {
-    const copy = useCopy()
+    const copy = settingsCopy(useLanguage())
     return <button type="button" title={copy.open} style={button} onClick={() => window.location.assign('/prism')}>
       {copy.title}
     </button>
   }
   ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section', id: 'prism-projects', order: 60, label: () => settingsCopy(ctx.locale.getSnapshot().active).title,
+    name: 'settings.section', id: 'prism-projects', order: 60, label: () => {
+      const copy = settingsCopy(ctx.locale.getSnapshot().active)
+      return `${copy.title}/${copy.config}`
+    },
   }, PrismSettings))
+  ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section', id: 'prism-im', order: 61,
+    label: () => `${settingsCopy(ctx.locale.getSnapshot().active).title}/IM`,
+  }, PrismIm))
   ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
     name: 'sidebar.footer.action', id: 'prism-chat', order: 60,
   }, PrismButton))

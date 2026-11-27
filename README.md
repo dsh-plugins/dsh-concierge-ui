@@ -14,7 +14,7 @@ English | [简体中文](README.zh_CN.md)
 
 Open **Plugins → Add plugin** and install and enable the five `@dsh-prism` packages in the order shown in the guide. To install this package, enter `@dsh-prism/dsh-concierge-ui@0.1.1`. [Illustrated installation guide](https://prism.dsh-plug.in/guide/start)
 
-Add your model provider in **Settings → Models** and select the model in a workspace. Under **Settings → Prism**, add project folders and choose which tools their agents may use. Open Prism to send a request across projects. Expand a task card to follow progress. [Two-project walkthrough](https://prism.dsh-plug.in/guide/start)
+Add your model provider in **Settings → Models** and select the model in a workspace. Under **Settings → Prism/Configuration**, add project folders and choose which tools their agents may use. Click **Open Prism** to send a request across projects. Expand a task card to follow progress. Manage messaging accounts under **Settings → Prism/IM**. [Two-project walkthrough](https://prism.dsh-plug.in/guide/start)
 
 ## Run the standalone host from source
 

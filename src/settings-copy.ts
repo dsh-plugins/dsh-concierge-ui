@@ -2,6 +2,7 @@ import type { Language } from './locale.js'
 
 const en = {
   title: 'Prism',
+  config: 'Configuration',
   open: 'Open Prism',
   projects: 'Authorized projects',
   modelHelp: 'Configure your provider and model in DSH model settings, then select that model in a DSH chat.',
@@ -29,6 +30,7 @@ const copies: Record<Language, typeof en> = {
   en,
   zh: {
     title: '棱镜',
+    config: '配置',
     open: '打开棱镜',
     projects: '已授权项目',
     modelHelp: '在 DSH 的模型设置中配置供应商和模型，然后在 DSH 对话中选用该模型。',
@@ -53,6 +55,7 @@ const copies: Record<Language, typeof en> = {
   },
   de: {
     title: 'Prism',
+    config: 'Konfiguration',
     open: 'Prism öffnen',
     projects: 'Freigegebene Projekte',
     modelHelp: 'Richten Sie Anbieter und Modell in den Modelleinstellungen von DSH ein. Wählen Sie das Modell anschließend in einem DSH-Chat aus.',
@@ -77,6 +80,7 @@ const copies: Record<Language, typeof en> = {
   },
   es: {
     title: 'Prism',
+    config: 'Configuración',
     open: 'Abrir Prism',
     projects: 'Proyectos autorizados',
     modelHelp: 'Configura el proveedor y el modelo en los ajustes de modelos de DSH. Después, selecciona ese modelo en un chat de DSH.',
@@ -101,6 +105,7 @@ const copies: Record<Language, typeof en> = {
   },
   fr: {
     title: 'Prism',
+    config: 'Configuration',
     open: 'Ouvrir Prism',
     projects: 'Projets autorisés',
     modelHelp: 'Configurez le fournisseur et le modèle dans les paramètres des modèles de DSH, puis sélectionnez ce modèle dans une conversation DSH.',
@@ -125,6 +130,7 @@ const copies: Record<Language, typeof en> = {
   },
   ja: {
     title: 'Prism',
+    config: '設定',
     open: 'Prism を開く',
     projects: 'アクセスを許可したプロジェクト',
     modelHelp: 'DSH のモデル設定でプロバイダーとモデルを設定し、DSH のチャットでそのモデルを選択してください。',
@@ -149,6 +155,7 @@ const copies: Record<Language, typeof en> = {
   },
   pt: {
     title: 'Prism',
+    config: 'Configuração',
     open: 'Abrir o Prism',
     projects: 'Projetos autorizados',
     modelHelp: 'Configure o provedor e o modelo nas configurações de modelos do DSH. Depois, selecione esse modelo em uma conversa do DSH.',
@@ -173,6 +180,7 @@ const copies: Record<Language, typeof en> = {
   },
   ru: {
     title: 'Prism',
+    config: 'Настройки',
     open: 'Открыть Prism',
     projects: 'Разрешённые проекты',
     modelHelp: 'Укажите поставщика и модель в настройках моделей DSH, затем выберите эту модель в чате DSH.',
