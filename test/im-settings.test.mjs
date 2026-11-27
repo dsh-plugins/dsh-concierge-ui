@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createElement } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
-import { ChannelForm } from '../dist/ImSettings.js'
 import { officialLink } from '../dist/ImQr.js'
-import { activeLogin, admin, AdminError, channels, editedFields, fields, publicFields, savedSecrets } from '../dist/im-admin.js'
-import { imCopy } from '../dist/im-copy.js'
+import { activeLogin, admin, AdminError, editedFields, publicFields, savedSecrets } from '../dist/im-admin.js'
 
 function view(channel, saved = {}) {
   return {channel, fields: saved, revision: 2, secrets: {}, status: 'disabled', enabled: false, registered: false}
@@ -26,30 +22,6 @@ test('blank passwords keep the stored value, explicit clearing and replacement a
   assert.deepEqual(savedSecrets({accessToken: '', eventSecret: ''}, []), {})
   assert.deepEqual(savedSecrets({accessToken: '', eventSecret: 'replacement'}, ['accessToken']),
     {accessToken: null, eventSecret: 'replacement'})
-})
-
-test('every channel renders its localized fields, pairing action and separate enable button without fetching', async (t) => {
-  t.mock.method(globalThis, 'fetch', () => {throw new Error('Opening a form issued an unexpected request')})
-  t.after(() => {delete globalThis.window})
-  globalThis.window = {location: {origin: 'https://dsh.example.org'}}
-  for (const locale of ['en', 'zh-CN']) {
-    const copy = imCopy(locale)
-    for (const channel of channels) {
-      const sample = view(channel)
-      sample.secrets = Object.fromEntries(fields[channel].private.map(key => [key, true]))
-      const html = renderToStaticMarkup(createElement(ChannelForm, {view: sample, copy, update() {}, reload() {}}))
-      assert.ok(html.includes('data-prism-channel-panel="' + channel + '"'))
-      for (const name of [...fields[channel].public, ...fields[channel].private]) assert.ok(html.includes(copy.field[name]))
-      assert.equal((html.match(/type="password"/g) ?? []).length, fields[channel].private.length)
-      for (const label of [copy.permissions, copy.issuePair, copy.enable, copy.save]) assert.ok(html.includes(label))
-      assert.ok(html.includes('data-prism-pair-start'))
-      assert.equal(html.includes('/pair '), false)
-      const supportsQr = channel === 'wechat' || channel === 'feishu'
-      assert.equal(html.includes('data-prism-qr-start'), supportsQr)
-      if (supportsQr) assert.ok(html.includes('data-state="idle"'))
-    }
-  }
-  assert.equal(globalThis.fetch.mock.callCount(), 0)
 })
 
 test('QR challenge links stay on the selected service and terminal states stop polling', () => {

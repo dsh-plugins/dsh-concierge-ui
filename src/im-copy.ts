@@ -1,7 +1,8 @@
 import type { Channel, ChannelStatus, LoginStatus } from './im-admin.js'
 
 const en = {
-  title: 'Messaging channels', channel: 'Channel', loading: 'Loading channels…',
+  title: 'Messaging channels', channel: 'IM type', add: 'Add IM', empty: 'No IM accounts configured.', loading: 'Loading channels…',
+  username: 'Username', unnamed: 'Username not set', cancelEdit: 'Cancel editing',
   load: 'Reload channels', noGateway: 'Messaging settings are unavailable. Check that the Prism IM gateway is installed and enabled.',
   permissions: 'Allowed direct-message user IDs', listHint: 'Enter one ID per line. Paired users can also access the channel.',
   save: 'Save settings', saved: 'Settings saved.', enable: 'Enable channel', disable: 'Disable channel',
@@ -38,7 +39,8 @@ const en = {
   names: {telegram: 'Telegram', wechat: 'WeChat', feishu: 'Feishu / Lark', wecom: 'WeCom', qq: 'QQ Bot', onebot: 'OneBot', discord: 'Discord'} satisfies Record<Channel, string>,
 }
 const zh: typeof en = {
-  title: '消息渠道', channel: '渠道', loading: '正在加载消息渠道…',
+  title: '消息渠道', channel: 'IM 类型', add: '添加 IM', empty: '尚未配置 IM 账号。', loading: '正在加载消息渠道…',
+  username: '用户名', unnamed: '未设置用户名', cancelEdit: '取消编辑',
   load: '重新加载渠道', noGateway: '消息渠道设置不可用，请检查棱镜消息网关插件是否已安装并启用。',
   permissions: '允许私聊的用户 ID', listHint: '每行填写一个 ID。已配对的用户也可使用该渠道。',
   save: '保存配置', saved: '配置已保存。', enable: '启用渠道', disable: '停用渠道', saveFirst: '请先保存修改，再更改渠道状态。',

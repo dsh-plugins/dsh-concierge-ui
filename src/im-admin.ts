@@ -5,6 +5,8 @@ export type ChannelStatus = 'disabled' | 'starting' | 'running' | 'error'
 export interface ChannelView {
   channel: Channel
   revision: number
+  username?: string
+  accountId?: string
   enabled: boolean
   status: ChannelStatus
   fields: Record<string, string | string[]>

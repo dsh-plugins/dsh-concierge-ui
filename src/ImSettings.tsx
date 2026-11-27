@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { admin, AdminError, channels, editedFields, fields, publicFields, savedSecrets, type Channel, type ChannelView } from './im-admin.js'
+import { useEffect, useId, useRef, useState } from 'react'
+import { admin, AdminError, editedFields, fields, publicFields, savedSecrets, type Channel, type ChannelView } from './im-admin.js'
 import type { ImCopy } from './im-copy.js'
 import { ImQr } from './ImQr.js'
 import { ui } from './im-style.js'
@@ -8,6 +8,23 @@ function describe(error: unknown, copy: ImCopy): string {
   if (!(error instanceof AdminError)) return copy.error
   if (error.code === 'unavailable' || error.code === 'not_found') return copy.noGateway
   return copy[error.code]
+}
+
+async function readChannels(signal?: AbortSignal): Promise<ChannelView[]> {
+  const response = await admin<{channels: ChannelView[]}>(undefined, signal)
+  if (!Array.isArray(response.channels)) {
+    throw new Error('Invalid channel list')
+  }
+  return response.channels
+}
+
+function configured(view: ChannelView): boolean {
+  return view.revision > 0 || view.enabled || view.registered || Object.values(view.secrets).some(Boolean)
+}
+
+function accountName(view: ChannelView): string | undefined {
+  const id = view.fields.botId || view.fields.appId || view.fields.selfId
+  return view.username || (typeof id === 'string' && id ? id : view.accountId)
 }
 
 function Pairing({ channel, copy }: {channel: Channel; copy: ImCopy}) {
@@ -49,15 +66,17 @@ function Pairing({ channel, copy }: {channel: Channel; copy: ImCopy}) {
   </section>
 }
 
-export function ChannelForm({ view, copy, update, reload }: {
-  view: ChannelView; copy: ImCopy; update(view: ChannelView): void; reload(): void
+function ChannelForm({ view, copy, update, reload, cancel }: {
+  view: ChannelView; copy: ImCopy; update(view: ChannelView, collapse?: boolean): void; reload(): void; cancel(): void
 }) {
   const [values, setValues] = useState(() => publicFields(view))
   const [ids, setIds] = useState(() => (view.fields.allowedUserIds as string[] | undefined)?.join('\n') ?? '')
+  const [username, setUsername] = useState(view.username ?? '')
   const [passwords, setPasswords] = useState<Record<string,string>>({})
   const [clear, setClear] = useState<string[]>([])
-  const [base, setBase] = useState(() => ({revision: view.revision, fields: publicFields(view)}))
+  const [base, setBase] = useState(() => ({revision: view.revision, fields: publicFields(view), username: view.username ?? ''}))
   const [saving, setSaving] = useState(false)
+  const [refreshingRegistration, setRefreshingRegistration] = useState(false)
   const [message, setMessage] = useState('')
   const [failed, setFailed] = useState(false)
   const pending = useRef(false)
@@ -65,43 +84,100 @@ export function ChannelForm({ view, copy, update, reload }: {
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   const channel = view.channel
   const schema = fields[channel]
+  const busy = saving || refreshingRegistration
 
   const draft: Record<string,string | string[]> = {}
   for (const name of schema.public) {
     const raw = values[name]
-    if (typeof raw === 'string' && raw.trim()) draft[name] = raw.trim()
+    if (typeof raw === 'string' && raw.trim()) {
+      draft[name] = raw.trim()
+    }
   }
   draft.allowedUserIds = [...new Set(ids.split(/[\n,]/).map(id => id.trim()).filter(Boolean))]
   const secrets = savedSecrets(passwords, clear)
-  const dirty = JSON.stringify(draft) !== JSON.stringify(base.fields) || Object.keys(secrets).length > 0
+  const nameChanged = username.trim() !== base.username
+  const dirty = nameChanged || JSON.stringify(draft) !== JSON.stringify(base.fields) || Object.keys(secrets).length > 0
   useEffect(() => {
-    if (dirty || view.revision === base.revision) return
+    if (dirty || busy || view.revision === base.revision) {
+      return
+    }
     const refreshed = publicFields(view)
     setValues(refreshed)
     setIds((refreshed.allowedUserIds as string[]).join('\n'))
-    setBase({revision: view.revision, fields: refreshed})
-  }, [view, base.revision, dirty])
+    setUsername(view.username ?? '')
+    setBase({revision: view.revision, fields: refreshed, username: view.username ?? ''})
+  }, [view, base.revision, busy, dirty])
   function changed() { setMessage(''); setFailed(false) }
 
-  async function save(enabled: boolean) {
-    if (pending.current) return
+  async function save(enabled: boolean, collapse: boolean) {
+    if (pending.current || refreshingRegistration) {
+      return
+    }
+    if (collapse && !configured(view) && !username.trim()) {
+      setMessage(copy.invalid)
+      setFailed(true)
+      return
+    }
     pending.current = true
     setSaving(true)
     changed()
     try {
       const next = await admin<ChannelView>({op:'save', channel, revision: dirty ? base.revision : view.revision,
-        enabled, fields: dirty ? editedFields(channel, base.fields, draft) : publicFields(view), secrets})
-      if (!alive.current) return
-      if (next.channel !== channel) throw new Error('Mismatched channel')
-      update(next)
+        enabled, fields: dirty ? editedFields(channel, base.fields, draft) : publicFields(view), secrets,
+        ...(nameChanged && {username: username.trim()})})
+      if (!alive.current) {
+        return
+      }
+      if (next.channel !== channel || nameChanged && (next.username ?? '') !== username.trim()) {
+        throw new Error('Unexpected channel settings response')
+      }
+      update(next, collapse)
+      if (collapse) {
+        return
+      }
       const config = publicFields(next)
       setValues(config); setIds((config.allowedUserIds as string[]).join('\n'))
-      setBase({revision: next.revision, fields: config})
+      setUsername(next.username ?? '')
+      setBase({revision: next.revision, fields: config, username: next.username ?? ''})
       setClear([]); setPasswords({}); setMessage(copy.saved)
     } catch (error) {
       if (alive.current) { setMessage(describe(error,copy)); setFailed(true) }
     } finally {
       if (alive.current) { pending.current = false; setSaving(false) }
+    }
+  }
+
+  async function syncRegistration() {
+    setRefreshingRegistration(true)
+    try {
+      const next = (await readChannels()).find(item => item.channel === channel)
+      if (!alive.current) {
+        return
+      }
+      if (!next?.registered) {
+        throw new Error('Missing channel registration')
+      }
+      const refreshed = publicFields(next)
+      setValues(refreshed)
+      setClear([])
+      setPasswords({})
+      if (JSON.stringify(draft.allowedUserIds) === JSON.stringify(base.fields.allowedUserIds)) {
+        setIds((refreshed.allowedUserIds as string[]).join('\n'))
+      }
+      if (!nameChanged) {
+        setUsername(next.username ?? '')
+      }
+      setBase({revision: next.revision, fields: refreshed, username: next.username ?? ''})
+      update(next)
+    } catch (error) {
+      if (alive.current) {
+        setMessage(describe(error, copy))
+        setFailed(true)
+      }
+    } finally {
+      if (alive.current) {
+        setRefreshingRegistration(false)
+      }
     }
   }
 
@@ -113,90 +189,140 @@ export function ChannelForm({ view, copy, update, reload }: {
       {(channel === 'onebot' || channel === 'qq') && <label style={ui.field}>{copy.callback}
         <input style={ui.input} readOnly value={new URL('/prism/im/' + channel, window.location.origin).href} />
       </label>}
-      <form style={ui.stack} autoComplete="off" onSubmit={e => {e.preventDefault(); void save(view.enabled)}}>
-        {schema.public.map(name => name === 'domain' ?
-          <label key={name} style={ui.field}>{copy.field[name]}
-            <select style={ui.input} value={String(values[name] ?? '')} onChange={e => {setValues({...values, [name]:e.target.value}); changed()}}>
-              <option value="">{copy.automatic}</option><option value="feishu">{copy.names.feishu.split(' / ')[0]}</option><option value="lark">Lark</option>
-            </select>
-          </label> :
-          <label key={name} style={ui.field}>{copy.field[name]}
-            <input style={ui.input} name={name} value={String(values[name] || '')} spellCheck={false}
-              type={name === 'apiBase' ? 'url' : 'text'} onChange={e => {setValues({...values, [name]:e.target.value}); changed()}} />
-          </label>)}
-        {schema.private.map(name => <div key={name} style={ui.field}>
-          <label style={ui.field}>{copy.field[name]}
-            <input style={ui.input} type="password" name={'prism-' + channel + '-' + name}
-              autoComplete="new-password" spellCheck={false}
-              value={passwords[name] ?? ''} placeholder={view.secrets[name] ? copy.keep : undefined}
-              onChange={e => {setPasswords({...passwords, [name]:e.target.value});setClear(clear.filter(k => k !== name));changed()}} />
+      <form style={ui.stack} autoComplete="off" onSubmit={e => {e.preventDefault(); void save(view.enabled, true)}}>
+        <fieldset style={ui.formFields} disabled={busy}>
+          <label style={ui.field}>{copy.username}
+            <input style={ui.input} name="username" value={username} maxLength={256} required={!configured(view)}
+              placeholder={accountName(view)} spellCheck={false} onChange={e => {setUsername(e.target.value); changed()}} />
           </label>
-          <small>{view.secrets[name] ? copy.credentialStored : copy.credentialEmpty}</small>
-          {view.secrets[name] && <label style={ui.row}>
-            <input type="checkbox" checked={clear.includes(name)} onChange={e => {
-              setClear(e.target.checked ? [...clear,name] : clear.filter(k => k !== name))
-              setPasswords({...passwords,[name]:''}); changed()
-            }} />{copy.removeSecret} · {copy.field[name]}</label>}
-        </div>)}
-        <label style={ui.field}>{copy.permissions}
-          <textarea style={ui.input} rows={2} value={ids} spellCheck={false} onChange={e => {setIds(e.target.value);changed()}} />
-          <small>{copy.listHint}</small>
-        </label>
-        <div style={ui.row}>
-          <button type="submit" style={ui.button} disabled={saving}>{saving ? copy.working : copy.save}</button>
-          <button type="button" style={ui.button} disabled={saving || dirty}
-            onClick={() => void save(!view.enabled)}>{view.enabled ? copy.disable : copy.enable}</button>
-        </div>
-        {dirty && <small>{copy.saveFirst}</small>}
+          {schema.public.map(name => name === 'domain' ?
+            <label key={name} style={ui.field}>{copy.field[name]}
+              <select style={ui.input} value={String(values[name] ?? '')} onChange={e => {setValues({...values, [name]:e.target.value}); changed()}}>
+                <option value="">{copy.automatic}</option><option value="feishu">{copy.names.feishu.split(' / ')[0]}</option><option value="lark">Lark</option>
+              </select>
+            </label> :
+            <label key={name} style={ui.field}>{copy.field[name]}
+              <input style={ui.input} name={name} value={String(values[name] || '')} spellCheck={false}
+                type={name === 'apiBase' ? 'url' : 'text'} onChange={e => {setValues({...values, [name]:e.target.value}); changed()}} />
+            </label>)}
+          {schema.private.map(name => <div key={name} style={ui.field}>
+            <label style={ui.field}>{copy.field[name]}
+              <input style={ui.input} type="password" name={'prism-' + channel + '-' + name}
+                autoComplete="new-password" spellCheck={false}
+                value={passwords[name] ?? ''} placeholder={view.secrets[name] ? copy.keep : undefined}
+                onChange={e => {setPasswords({...passwords, [name]:e.target.value});setClear(clear.filter(k => k !== name));changed()}} />
+            </label>
+            <small>{view.secrets[name] ? copy.credentialStored : copy.credentialEmpty}</small>
+            {view.secrets[name] && <label style={ui.row}>
+              <input type="checkbox" checked={clear.includes(name)} onChange={e => {
+                setClear(e.target.checked ? [...clear,name] : clear.filter(k => k !== name))
+                setPasswords({...passwords,[name]:''}); changed()
+              }} />{copy.removeSecret} · {copy.field[name]}</label>}
+          </div>)}
+          <label style={ui.field}>{copy.permissions}
+            <textarea style={ui.input} rows={2} value={ids} spellCheck={false} onChange={e => {setIds(e.target.value);changed()}} />
+            <small>{copy.listHint}</small>
+          </label>
+          <div style={ui.row}>
+            <button type="submit" style={ui.button}>{saving ? copy.working : copy.save}</button>
+            <button type="button" style={ui.button} disabled={dirty || !configured(view)}
+              onClick={() => void save(!view.enabled, false)}>{view.enabled ? copy.disable : copy.enable}</button>
+            <button type="button" style={ui.button} onClick={cancel}>{copy.cancelEdit}</button>
+            {failed && <button type="button" style={ui.button} onClick={reload}>{copy.load}</button>}
+          </div>
+          {dirty && <small>{copy.saveFirst}</small>}
+        </fieldset>
         {message && <div role={failed ? 'alert' : 'status'}>{message}</div>}
       </form>
     </div>
-    {(channel === 'wechat' || channel === 'feishu') && <ImQr channel={channel} copy={copy} registered={view.registered} onRegistered={reload} />}
+    {(channel === 'wechat' || channel === 'feishu') && <ImQr channel={channel} copy={copy} registered={view.registered} onRegistered={() => void syncRegistration()} />}
     <Pairing channel={channel} copy={copy} />
   </section>
 }
 
 export function ImSettings({ copy }: {copy: ImCopy}) {
-  const [channel, setChannel] = useState<Channel>('telegram')
+  const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<Channel>()
   const [views, setViews] = useState<ChannelView[]>()
   const [readError, setReadError] = useState('')
   const [refresh, setRefresh] = useState(0)
   const [epoch, setEpoch] = useState(0)
   const discardOnRead = useRef(false)
+  const addButton = useRef<HTMLButtonElement>(null)
+  const choiceId = useId()
   useEffect(() => {
     const controller = new AbortController()
-    admin<{channels: ChannelView[]}>(undefined, controller.signal).then(response => {
-      if (controller.signal.aborted) return
-      if (!Array.isArray(response.channels)) throw new Error('Invalid channel list')
-      setViews(current => response.channels.map(incoming => {
+    readChannels(controller.signal).then(incomingViews => {
+      if (controller.signal.aborted) {
+        return
+      }
+      setViews(current => incomingViews.map(incoming => {
         const previous = current?.find(item => item.channel === incoming.channel)
         return previous && previous.revision > incoming.revision ? previous : incoming
       }))
       setReadError('')
-      if (discardOnRead.current) {discardOnRead.current = false; setEpoch(x => x + 1)}
+      if (discardOnRead.current) {
+        discardOnRead.current = false
+        setEpoch(x => x + 1)
+      }
     }).catch(error => {
-      if (!controller.signal.aborted) setReadError(describe(error,copy))
+      if (!controller.signal.aborted) {
+        discardOnRead.current = false
+        setReadError(describe(error,copy))
+      }
     })
     return () => controller.abort()
   }, [refresh,copy])
-  const view = views?.find(item => item.channel === channel)
+  const view = views?.find(item => item.channel === editing)
   useEffect(() => {
-    if (!view?.enabled) return
+    if (!view?.enabled) {
+      return
+    }
     const timer = setTimeout(() => setRefresh(x => x + 1), 4000)
     return () => clearTimeout(timer)
-  }, [channel, view?.enabled, refresh])
-  const update = (next: ChannelView) => setViews(current => current?.map(v => v.channel === next.channel ? next : v))
+  }, [editing, view?.enabled, refresh])
+  function update(next: ChannelView, collapse = false) {
+    setViews(current => current?.map(v => v.channel === next.channel && v.revision <= next.revision ? next : v))
+    if (collapse) {
+      setEditing(current => current === next.channel ? undefined : current)
+    }
+  }
+  function reload() {
+    discardOnRead.current = true
+    setRefresh(x => x + 1)
+  }
+  const saved = views?.filter(configured) ?? []
+  const available = views?.filter(item => !configured(item)) ?? []
+  const cards = view && !configured(view) ? [...saved, view] : saved
   return <section style={{ ...ui.stack, maxWidth: 620, padding: '8px 0 20px' }}>
     <h2 style={{ margin: 0 }}>{copy.title}</h2>
-    <label style={ui.field}>{copy.channel}
-      <select style={ui.input} data-prism-channel="" value={channel} onChange={e => setChannel(e.target.value as Channel)}>
-        {channels.map(id => <option key={id} value={id}>{copy.names[id]}</option>)}
-      </select>
-    </label>
+    {!!available.length && <div style={ui.stack} onKeyDown={event => {
+      if (event.key === 'Escape' && adding) {
+        event.stopPropagation()
+        setAdding(false)
+        addButton.current?.focus()
+      }
+    }}>
+      <div><button type="button" ref={addButton} style={ui.button} aria-controls={choiceId} aria-expanded={adding}
+        disabled={Boolean(view)} onClick={() => setAdding(!adding)}>{copy.add}</button></div>
+      <div id={choiceId} role="group" aria-label={copy.channel} hidden={!adding || Boolean(view)}>
+        <div style={ui.choices}>
+          {available.map(({ channel }) => <button key={channel} type="button" style={ui.button} onClick={() => {
+            setAdding(false)
+            setEditing(channel)
+          }}>{copy.names[channel]}</button>)}
+        </div>
+      </div>
+    </div>}
     {readError && <p role="alert">{readError}</p>}
     {!views && !readError && <p role="status">{copy.loading}</p>}
-    {views && !view && <p role="alert">{copy.noGateway}</p>}
-    {view && <ChannelForm key={channel + epoch} view={view} copy={copy} update={update} reload={() => setRefresh(x => x+1)}/>}
-    <div><button type="button" style={ui.button} onClick={() => {discardOnRead.current = true; setRefresh(x=>x+1)}}>{copy.load}</button></div>
+    {views && cards.length === 0 && <p>{copy.empty}</p>}
+    {cards.map(card => card.channel === editing ?
+      <ChannelForm key={card.channel + epoch} view={card} copy={copy} update={update} reload={reload} cancel={() => setEditing(undefined)} /> :
+      <button key={card.channel} type="button" style={{...ui.button, ...ui.summary}} data-prism-channel-card={card.channel}
+        disabled={Boolean(view)} onClick={() => {setAdding(false); setEditing(card.channel)}}>
+        <strong>{copy.names[card.channel]}</strong><span style={ui.accountName}>{accountName(card) ?? copy.unnamed}</span>
+      </button>)}
+    {!view && <div><button type="button" style={ui.button} onClick={reload}>{copy.load}</button></div>}
   </section>
 }
