@@ -2,11 +2,12 @@ import { useState, useSyncExternalStore } from 'react'
 import type { CSSProperties, FormEvent } from 'react'
 import type { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import type { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import type { SidebarFooterActionOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type { ConfigForm, ConfigForms } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { settingsCopy } from './settings-copy.js'
 import { ImSettings } from './ImSettings.js'
 import { imCopy } from './im-copy.js'
+import { PrismShortcut } from './PrismShortcut.js'
 
 interface Project {
   id: string
@@ -211,11 +212,9 @@ export function apply(ctx: BrowserContext) {
   function PrismIm() {
     return <ImSettings copy={imCopy(useLanguage())} />
   }
-  function PrismButton() {
+  function PrismButton({ wide }: SidebarFooterActionOwnerProps) {
     const copy = settingsCopy(useLanguage())
-    return <button type="button" title={copy.open} style={button} onClick={() => window.location.assign('/prism')}>
-      {copy.title}
-    </button>
+    return <PrismShortcut wide={wide} label={copy.title} title={copy.open} />
   }
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section', id: 'prism-projects', order: 60, label: () => {
