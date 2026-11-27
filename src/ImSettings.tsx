@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { admin, AdminError, editedFields, fields, publicFields, savedSecrets, type Channel, type ChannelView, type FeishuMode } from './im-admin.js'
 import type { ImCopy } from './im-copy.js'
 import { FeishuBinding } from './FeishuBinding.js'
+import { ImApprovals } from './ImApprovals.js'
 import { ImQr } from './ImQr.js'
 import { ui } from './im-style.js'
 
@@ -31,50 +32,10 @@ function accountName(view: ChannelView): string | undefined {
   return view.username || (typeof id === 'string' && id ? id : view.accountId)
 }
 
-function Pairing({ channel, copy }: {channel: Channel; copy: ImCopy}) {
-  const [issued, setIssued] = useState<{code: string; expiresAt: number}>()
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const pending = useRef<AbortController>()
-  useEffect(() => () => pending.current?.abort(), [])
-  useEffect(() => {
-    if (!issued) return
-    const timer = setTimeout(() => setIssued(undefined), Math.max(0, issued.expiresAt - Date.now()))
-    return () => clearTimeout(timer)
-  }, [issued])
-  async function generate() {
-    if (pending.current) return
-    const controller = new AbortController()
-    pending.current = controller
-    setBusy(true); setError('')
-    try {
-      const result = await admin<{code: string; expiresAt: number}>({op: 'pair', channel}, controller.signal)
-      if (!/^[A-F0-9]{20}$/i.test(result.code) || !Number.isFinite(result.expiresAt) || result.expiresAt <= Date.now()) throw new Error('Invalid pairing response')
-      if (!controller.signal.aborted) setIssued(result)
-    } catch (failure) {
-      if (!controller.signal.aborted) setError(describe(failure, copy))
-    } finally {
-      pending.current = undefined
-      if (!controller.signal.aborted) setBusy(false)
-    }
-  }
-  return <section style={ui.panel}>
-    <h4 style={{margin: 0}}>{copy.pair}</h4>
-    <p style={{margin: 0}}>{copy.pairHelp}</p>
-    {issued ? <>
-      <code data-prism-qr="">{'/pair ' + issued.code}</code>
-      <small>{copy.expires} {new Date(issued.expiresAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small>
-      <div><button type="button" style={ui.button} onClick={() => setIssued(undefined)}>{copy.hidePair}</button></div>
-    </> : <div><button type="button" data-prism-pair-start="" style={ui.button} disabled={busy} onClick={() => void generate()}>{copy.issuePair}</button></div>}
-    {error && <div role="alert">{error}</div>}
-  </section>
-}
-
 function ChannelForm({ view, copy, update, reload, cancel }: {
   view: ChannelView; copy: ImCopy; update(view: ChannelView, collapse?: boolean): void; reload(): void; cancel(): void
 }) {
   const [values, setValues] = useState(() => publicFields(view))
-  const [ids, setIds] = useState(() => (view.fields.allowedUserIds as string[] | undefined)?.join('\n') ?? '')
   const [username, setUsername] = useState(view.username ?? '')
   const [feishuMode, setFeishuMode] = useState<FeishuMode>(() => view.feishu?.mode ?? 'scan')
   const [passwords, setPasswords] = useState<Record<string,string>>({})
@@ -92,14 +53,13 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
   const busy = saving || refreshingRegistration
   const scanningFeishu = channel === 'feishu' && feishuMode === 'scan'
 
-  const draft: Record<string,string | string[]> = {}
+  const draft: Record<string, string> = {}
   for (const name of schema.public) {
     const raw = (scanningFeishu ? base.fields : values)[name]
     if (typeof raw === 'string' && raw.trim()) {
       draft[name] = raw.trim()
     }
   }
-  draft.allowedUserIds = [...new Set(ids.split(/[\n,]/).map(id => id.trim()).filter(Boolean))]
   const secrets = scanningFeishu ? {} : savedSecrets(passwords, clear)
   const nameChanged = channel !== 'feishu' && username.trim() !== base.username
   const dirty = nameChanged || JSON.stringify(draft) !== JSON.stringify(base.fields) || Object.keys(secrets).length > 0
@@ -109,7 +69,6 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
     }
     const refreshed = publicFields(view)
     setValues(refreshed)
-    setIds((refreshed.allowedUserIds as string[]).join('\n'))
     setUsername(view.username ?? '')
     setBase({revision: view.revision, fields: refreshed, username: view.username ?? ''})
   }, [view, base.revision, busy, dirty])
@@ -148,7 +107,7 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
         return
       }
       const config = publicFields(next)
-      setValues(config); setIds((config.allowedUserIds as string[]).join('\n'))
+      setValues(config)
       setUsername(next.username ?? '')
       setBase({revision: next.revision, fields: config, username: next.username ?? ''})
       setClear([]); setPasswords({}); setMessage(copy.saved)
@@ -171,13 +130,8 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
       }
       const refreshed = publicFields(next)
       const latestUsername = next.username ?? ''
-      const baseUsers = JSON.stringify(base.fields.allowedUserIds)
-      const draftUsers = JSON.stringify(draft.allowedUserIds)
-      const latestUsers = JSON.stringify(refreshed.allowedUserIds)
-      const usersChanged = draftUsers !== baseUsers
       update(next)
-      if ((nameChanged && latestUsername !== base.username && latestUsername !== username.trim()) ||
-          (usersChanged && latestUsers !== baseUsers && latestUsers !== draftUsers)) {
+      if (nameChanged && latestUsername !== base.username && latestUsername !== username.trim()) {
         setMessage(copy.conflict)
         setFailed(true)
         return
@@ -185,9 +139,6 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
       setValues(refreshed)
       setClear([])
       setPasswords({})
-      if (!usersChanged) {
-        setIds((refreshed.allowedUserIds as string[]).join('\n'))
-      }
       if (!nameChanged) {
         setUsername(latestUsername)
       }
@@ -247,10 +198,6 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
           </label>}
           {channel === 'feishu' ? <FeishuBinding binding={view.feishu} copy={copy} mode={feishuMode} disabled={busy}
             manual={credentials} onMode={mode => {setFeishuMode(mode); changed()}} onRegistered={() => void syncRegistration()} /> : credentials}
-          <label style={ui.field}>{copy.permissions}
-            <textarea style={ui.input} rows={2} value={ids} spellCheck={false} onChange={e => {setIds(e.target.value);changed()}} />
-            <small>{copy.listHint}</small>
-          </label>
           <div style={ui.row}>
             <button type="submit" style={ui.button}>{saving ? copy.working : copy.save}</button>
             <button type="button" style={ui.button} disabled={dirty || !configured(view)}
@@ -264,7 +211,6 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
       </form>
     </div>
     {channel === 'wechat' && <ImQr channel={channel} copy={copy} registered={view.registered} onRegistered={() => void syncRegistration()} />}
-    <Pairing channel={channel} copy={copy} />
   </section>
 }
 
@@ -345,5 +291,6 @@ export function ImSettings({ copy }: {copy: ImCopy}) {
           {accountName(card) ?? (card.channel === 'feishu' ? copy.nicknameUnavailable : copy.unnamed)}</span>
       </button>)}
     {!view && <div><button type="button" style={ui.button} onClick={reload}>{copy.load}</button></div>}
+    <ImApprovals copy={copy} />
   </section>
 }

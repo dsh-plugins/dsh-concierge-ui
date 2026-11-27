@@ -60,18 +60,17 @@ export const fields: Record<Channel, {public: string[]; private: string[]}> = {
   discord: {public: [], private: ['token']},
 }
 
-export function publicFields(view: ChannelView): Record<string, string | string[]> {
-  const result: Record<string, string | string[]> = {}
+export function publicFields(view: ChannelView): Record<string, string> {
+  const result: Record<string, string> = {}
   for (const name of fields[view.channel].public) {
     const value = view.fields[name]
     if (typeof value === 'string' && value) result[name] = value
   }
-  result.allowedUserIds = Array.isArray(view.fields.allowedUserIds) ? [...view.fields.allowedUserIds] : []
   return result
 }
 
 /** The admin API merges public fields. Explicitly clear values removed in the form. */
-export function editedFields(channel: Channel, base: ChannelView['fields'], draft: ChannelView['fields']): ChannelView['fields'] {
+export function editedFields(channel: Channel, base: Record<string, string>, draft: Record<string, string>): Record<string, string> {
   const changes = { ...draft }
   for (const name of fields[channel].public) {
     if (Object.hasOwn(base, name) && !Object.hasOwn(draft, name)) changes[name] = ''

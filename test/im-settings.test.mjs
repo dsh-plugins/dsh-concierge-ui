@@ -10,12 +10,12 @@ function view(channel, saved = {}) {
 test('removing the Feishu app ID and domain explicitly clears the manual overrides', () => {
   const original = publicFields(view('feishu', {appId: 'sample-app', domain: 'lark', allowedUserIds: ['user1']}))
   const auto = publicFields(view('feishu', {allowedUserIds: ['user1']}))
-  assert.deepEqual(editedFields('feishu', original, auto), {appId: '', domain: '', allowedUserIds: ['user1']})
+  assert.deepEqual(editedFields('feishu', original, auto), {appId: '', domain: ''})
   const merged = {...original, ...editedFields('feishu', original, auto)}
   assert.deepEqual(publicFields(view('feishu', merged)), auto)
-  assert.deepEqual(editedFields('feishu', auto, auto), {allowedUserIds: ['user1']})
-  assert.deepEqual(editedFields('onebot', {selfId: 'u', apiBase: 'https://example.org'}, {allowedUserIds: []}),
-    {selfId: '', apiBase: '', allowedUserIds: []})
+  assert.deepEqual(editedFields('feishu', auto, auto), {})
+  assert.deepEqual(editedFields('onebot', {selfId: 'u', apiBase: 'https://example.org'}, {}),
+    {selfId: '', apiBase: ''})
 })
 
 test('blank passwords keep the stored value, explicit clearing and replacement are distinct', () => {
