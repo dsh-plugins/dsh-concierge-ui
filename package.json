@@ -22,6 +22,7 @@
     "!dist/*probe.*",
     "locale/*.json",
     "icon.svg",
+    "favicon.svg",
     "README.zh_CN.md",
     "cordis.patch.yml"
   ],

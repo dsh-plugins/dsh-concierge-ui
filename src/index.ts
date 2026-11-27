@@ -7,7 +7,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import type { WebAuthRequest, WebAdmission, WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { ConversationView, RegistryPort, TraceEntry } from '@dsh-prism/dsh-orchestrator/core'
-import { documentHtml, stylesheet } from './page.js'
+import { documentHtml, faviconPath, stylesheet } from './page.js'
 import { missingReply } from './delivery.js'
 import { openPrismOnLoad } from './navigation.js'
 
@@ -30,6 +30,7 @@ const publicPaths = new Set([
   ...pages,
   '/prism/browser.js',
   '/prism/style.css',
+  faviconPath,
   `${api}/view`,
   `${api}/events`,
   `${api}/message`,
@@ -211,7 +212,7 @@ export function createRoutes(
     const url = new URL(req.url ?? '/', 'http://dsh.invalid')
     const path = url.pathname
     try {
-      if (pages.has(path) || path === '/prism/browser.js' || path === '/prism/style.css') {
+      if (pages.has(path) || path === '/prism/browser.js' || path === '/prism/style.css' || path === faviconPath) {
         if (req.method !== 'GET' && req.method !== 'HEAD') {
           reply(res, 405, {}, { Allow: 'GET, HEAD' })
           return
@@ -226,6 +227,12 @@ export function createRoutes(
             ),
           })
           res.end(req.method === 'HEAD' ? undefined : documentHtml(nonce, language, integrated))
+          return
+        }
+        if (path === faviconPath) {
+          const icon = req.method === 'HEAD' ? undefined : await readFile(new URL('../favicon.svg', import.meta.url))
+          res.writeHead(200, { ...securityHeaders, 'Content-Type': 'image/svg+xml' })
+          res.end(icon)
           return
         }
         const isScript = path === '/prism/browser.js'

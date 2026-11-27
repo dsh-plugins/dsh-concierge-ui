@@ -1,5 +1,7 @@
 import { messages, type Language } from './locale.js'
 
+export const faviconPath = '/prism/favicon.svg'
+
 export function documentHtml(nonce: string, language: Language = 'en', integrated = false): string {
   const copy = messages(language)
   // Catalogs are bundled assets. Escape script delimiters even in an inert JSON block.
@@ -12,7 +14,7 @@ export function documentHtml(nonce: string, language: Language = 'en', integrate
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
       <meta name="theme-color" content="#fafbf8" />
-      <link rel="icon" href="data:," />
+      <link rel="icon" type="image/svg+xml" href="${faviconPath}" />
       <link rel="stylesheet" href="/prism/style.css" />
       <title>${copy.title}</title>
     </head>
