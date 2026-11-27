@@ -364,18 +364,49 @@ kbd {
   width: 15px;
   height: 16px;
 }
-.message p {
+.message.user > p {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.8;
   font-size: 15px;
   margin: 0;
-}
-.message.user p {
   background: var(--pale);
   border-radius: 15px 15px 3px 15px;
   padding: 9px 14px;
 }
+.prism-markdown {
+  min-width: 0;
+  max-width: 100%;
+  font-size: 15px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.prism-markdown > :first-child { margin-top: 0; }
+.prism-markdown > :last-child { margin-bottom: 0; }
+.prism-markdown ul, .prism-markdown ol { padding-inline-start: 1.5em; }
+.prism-markdown a { color: var(--green); }
+.prism-markdown code {
+  padding: .1em .3em;
+  border-radius: 4px;
+  background: var(--pale);
+}
+.prism-markdown pre {
+  max-width: 100%;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+}
+.prism-markdown pre code { padding: 0; background: transparent; }
+.prism-markdown blockquote {
+  margin-inline: 0;
+  padding-inline-start: 12px;
+  border-inline-start: 3px solid var(--line);
+  color: var(--muted);
+}
+.prism-markdown table { max-width: 100%; border-collapse: collapse; }
+.prism-markdown th, .prism-markdown td { padding: 4px 8px; border: 1px solid var(--line); }
 .task {
   border: 1px solid var(--line);
   border-radius: 14px;

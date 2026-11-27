@@ -1,6 +1,9 @@
 import { copy, locale } from './client-locale.js'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Card, Tag, type TagTone } from '@dsh-plugin/dsh-ui-components'
+import Markdown from 'react-markdown'
+import remarkBreaks from 'remark-breaks'
+import remarkGfm from 'remark-gfm'
 import type { ConversationView, PublicMessage, TaskCard } from '@dsh-prism/dsh-orchestrator/contracts'
 import { missingReply } from './delivery.js'
 
@@ -13,6 +16,12 @@ const states: Record<TaskCard['status'], { label: string; tone: TagTone }> = {
 const clock = new Intl.DateTimeFormat(locale, {
   month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
 })
+const markdownComponents = {
+  a: ({href, children}: React.ComponentProps<'a'>) => (
+    <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+  ),
+  img: ({alt}: React.ComponentProps<'img'>) => alt || null,
+}
 
 function Timestamp({ at }: { at?: string }) {
   if (!at) return null
@@ -30,7 +39,9 @@ function Message({ item }: { item: PublicMessage }) {
         <strong>{assistant ? copy.brand : copy.you}</strong>
         <Timestamp at={item.at} />
       </span>
-      <p>{item.text}</p>
+      {assistant ? <div className="prism-markdown">
+        <Markdown skipHtml remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>{item.text}</Markdown>
+      </div> : <p>{item.text}</p>}
       {!assistant && item.delivery === 'pending' && <span className="time">{copy.processing}</span>}
       {!assistant && item.delivery === 'failed' &&
         <span className="time">{missingReply(item) ? copy.noResponse : copy.processFailed}</span>}
