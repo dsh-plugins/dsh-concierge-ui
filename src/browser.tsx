@@ -1,7 +1,7 @@
 import { copy } from './client-locale.js'
 import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { DshProvider } from '@dsh-plugin/dsh-ui-components'
+import { Button, DshProvider } from '@dsh-plugin/dsh-ui-components'
 import type { ConversationView } from '@dsh-prism/dsh-orchestrator/contracts'
 import { Composer } from './Composer.js'
 import { Timeline } from './Timeline.js'
@@ -103,7 +103,8 @@ function Concierge() {
     <DshProvider>
       <header className="topbar">
         <div className="brand"><PrismMark /><span>{copy.brand}</span>{copy.brand !== 'Prism' && <span className="brand-en" lang="en">Prism</span>}</div>
-        {document.getElementById('root')?.dataset.integrated === 'true' && <a className="dsh-home" href="/">DeepSeek Harness</a>}
+        {document.getElementById('root')?.dataset.integrated === 'true' && <Button variant="outline" size="sm"
+          onClick={() => window.location.assign('/')}>DeepSeek Harness</Button>}
       </header>
       <main id="main" className={empty ? 'empty' : undefined}>
         {empty ? (

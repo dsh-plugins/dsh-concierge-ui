@@ -28,7 +28,8 @@ function CodeImage({ payload, channel, copy }: { payload: string; channel: Login
   return <div data-prism-qr="" style={{ ...ui.stack, justifyItems: 'start' }}>
     {src && <img src={src} width={240} height={240} alt={copy.qrAlt} />}
     {failed && <span role="alert">{copy.qrError}</span>}
-    {link && <a href={link} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">{copy.official}</a>}
+    {link && <button type="button" style={ui.button}
+      onClick={() => window.open(link, '_blank', 'noopener,noreferrer')}>{copy.official}</button>}
   </div>
 }
 

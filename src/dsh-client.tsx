@@ -166,7 +166,7 @@ function Settings({ form, copy }: { form: ConfigForm<ProjectSettings>; copy: Cop
   return <section style={{ ...stack, maxWidth: 620, padding: '8px 0 20px' }}>
     <h2 style={{ margin: 0 }}>{copy.projects}</h2>
     <p style={{ margin: 0 }}>{copy.modelHelp}</p>
-    <a href="/prism">{copy.open}</a>
+    <div><button type="button" style={button} onClick={() => window.location.assign('/prism')}>{copy.open}</button></div>
     {projects.map(p => <div key={p.id} style={panel}>
       <strong>{p.id}</strong><span style={{ overflowWrap: 'anywhere' }}>{p.workspace}</span>
       <span>{p.permissions.join(', ')}</span>
@@ -218,14 +218,16 @@ export function apply(ctx: BrowserContext) {
       {section === 'projects' ? <Settings form={form} copy={projects} /> : <ImSettings copy={im} />}
     </div>
   }
-  function PrismLink() {
+  function PrismButton() {
     const copy = useCopy()
-    return <a href="/prism" title={copy.open} style={{ padding: '5px 8px', color: 'inherit' }}>{copy.title}</a>
+    return <button type="button" title={copy.open} style={button} onClick={() => window.location.assign('/prism')}>
+      {copy.title}
+    </button>
   }
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section', id: 'prism-projects', order: 60, label: () => settingsCopy(ctx.locale.getSnapshot().active).title,
   }, PrismSettings))
   ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
     name: 'sidebar.footer.action', id: 'prism-chat', order: 60,
-  }, PrismLink))
+  }, PrismButton))
 }

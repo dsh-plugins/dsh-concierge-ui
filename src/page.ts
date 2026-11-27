@@ -99,7 +99,6 @@ textarea:focus-visible {
   letter-spacing: 0.025em;
   font-size: 18px;
 }
-.dsh-home { color: var(--green); font-size: 14px; }
 .brand-en {
   font:
     normal italic 19px Georgia,
@@ -462,7 +461,6 @@ kbd {
   .brand {
     font-size: 16px;
   }
-  .dsh-home { color: var(--green); font-size: 14px; }
 .brand-en {
     font-size: 16px;
   }
