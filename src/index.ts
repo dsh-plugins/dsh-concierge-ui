@@ -6,7 +6,8 @@ import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import type { WebAuthRequest, WebAdmission, WebRoute } from '@deepseek-ai/dsh-host-webserver'
-import type { ConversationView, RegistryPort, TraceEntry } from '@dsh-prism/dsh-orchestrator/core'
+import type { RegistryPort, TraceEntry } from '@dsh-prism/dsh-orchestrator/core'
+import type { ConversationView } from './conversation.js'
 import { documentHtml, faviconPath, stylesheet } from './page.js'
 import { missingReply } from './delivery.js'
 import { openPrismOnLoad } from './navigation.js'
@@ -115,6 +116,7 @@ function project(view: ConversationView, copy: WebCopy): ConversationView {
       role: message.role,
       text: message.text,
       at: message.at,
+      ...(message.source && {source: {channel: message.source.channel, sender: message.source.sender}}),
       ...(message.delivery ? { delivery: message.delivery } : {}),
       ...(missingReply(message) ? { deliveryError: 'no_response' as const } : {}),
     })),

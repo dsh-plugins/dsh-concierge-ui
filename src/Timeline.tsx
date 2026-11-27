@@ -4,7 +4,8 @@ import { Card, Tag, type TagTone } from '@dsh-plugin/dsh-ui-components'
 import Markdown from 'react-markdown'
 import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
-import type { ConversationView, PublicMessage, TaskCard } from '@dsh-prism/dsh-orchestrator/contracts'
+import type { TaskCard } from '@dsh-prism/dsh-orchestrator/contracts'
+import type { ConversationView, PublicMessage } from './conversation.js'
 import { missingReply } from './delivery.js'
 
 const states: Record<TaskCard['status'], { label: string; tone: TagTone }> = {
@@ -36,7 +37,8 @@ function Message({ item }: { item: PublicMessage }) {
     <article className={'message ' + item.role} aria-label={assistant ? copy.prismMessage : copy.yourMessage}>
       <span className="speaker">
         {assistant && <span className="prism" aria-hidden="true"><i /><i /><i /></span>}
-        <strong>{assistant ? copy.brand : copy.you}</strong>
+        <strong>{assistant ? copy.brand : !item.source || item.source.channel === 'web'
+          ? copy.you : [item.source.sender, item.source.channel].filter(Boolean).join(' · ')}</strong>
         <Timestamp at={item.at} />
       </span>
       {assistant ? <div className="prism-markdown">
