@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { admin, AdminError, editedFields, fields, publicFields, savedSecrets, type Channel, type ChannelView } from './im-admin.js'
+import { admin, AdminError, editedFields, fields, publicFields, savedSecrets, type Channel, type ChannelView, type FeishuMode } from './im-admin.js'
 import type { ImCopy } from './im-copy.js'
+import { FeishuBinding } from './FeishuBinding.js'
 import { ImQr } from './ImQr.js'
 import { ui } from './im-style.js'
 
@@ -23,6 +24,9 @@ function configured(view: ChannelView): boolean {
 }
 
 function accountName(view: ChannelView): string | undefined {
+  if (view.channel === 'feishu') {
+    return view.feishu?.nickname
+  }
   const id = view.fields.botId || view.fields.appId || view.fields.selfId
   return view.username || (typeof id === 'string' && id ? id : view.accountId)
 }
@@ -72,6 +76,7 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
   const [values, setValues] = useState(() => publicFields(view))
   const [ids, setIds] = useState(() => (view.fields.allowedUserIds as string[] | undefined)?.join('\n') ?? '')
   const [username, setUsername] = useState(view.username ?? '')
+  const [feishuMode, setFeishuMode] = useState<FeishuMode>(() => view.feishu?.mode ?? 'scan')
   const [passwords, setPasswords] = useState<Record<string,string>>({})
   const [clear, setClear] = useState<string[]>([])
   const [base, setBase] = useState(() => ({revision: view.revision, fields: publicFields(view), username: view.username ?? ''}))
@@ -85,17 +90,18 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
   const channel = view.channel
   const schema = fields[channel]
   const busy = saving || refreshingRegistration
+  const scanningFeishu = channel === 'feishu' && feishuMode === 'scan'
 
   const draft: Record<string,string | string[]> = {}
   for (const name of schema.public) {
-    const raw = values[name]
+    const raw = (scanningFeishu ? base.fields : values)[name]
     if (typeof raw === 'string' && raw.trim()) {
       draft[name] = raw.trim()
     }
   }
   draft.allowedUserIds = [...new Set(ids.split(/[\n,]/).map(id => id.trim()).filter(Boolean))]
-  const secrets = savedSecrets(passwords, clear)
-  const nameChanged = username.trim() !== base.username
+  const secrets = scanningFeishu ? {} : savedSecrets(passwords, clear)
+  const nameChanged = channel !== 'feishu' && username.trim() !== base.username
   const dirty = nameChanged || JSON.stringify(draft) !== JSON.stringify(base.fields) || Object.keys(secrets).length > 0
   useEffect(() => {
     if (dirty || busy || view.revision === base.revision) {
@@ -113,8 +119,13 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
     if (pending.current || refreshingRegistration) {
       return
     }
-    if (collapse && !configured(view) && !username.trim()) {
+    if (collapse && channel !== 'feishu' && !configured(view) && !username.trim()) {
       setMessage(copy.invalid)
+      setFailed(true)
+      return
+    }
+    if (collapse && scanningFeishu && view.feishu?.mode !== 'scan') {
+      setMessage(copy.scanRequired)
       setFailed(true)
       return
     }
@@ -124,6 +135,7 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
     try {
       const next = await admin<ChannelView>({op:'save', channel, revision: dirty ? base.revision : view.revision,
         enabled, fields: dirty ? editedFields(channel, base.fields, draft) : publicFields(view), secrets,
+        ...(collapse && channel === 'feishu' && !scanningFeishu && {feishuMode: 'manual'}),
         ...(nameChanged && {username: username.trim()})})
       if (!alive.current) {
         return
@@ -192,6 +204,33 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
     }
   }
 
+  const credentials = <>
+    {schema.public.map(name => name === 'domain' ?
+      <label key={name} style={ui.field}>{copy.field[name]}
+        <select style={ui.input} value={String(values[name] ?? '')} onChange={e => {setValues({...values, [name]:e.target.value}); changed()}}>
+          <option value="">{copy.automatic}</option><option value="feishu">{copy.names.feishu.split(' / ')[0]}</option><option value="lark">Lark</option>
+        </select>
+      </label> :
+      <label key={name} style={ui.field}>{copy.field[name]}
+        <input style={ui.input} name={name} value={String(values[name] || '')} spellCheck={false}
+          type={name === 'apiBase' ? 'url' : 'text'} onChange={e => {setValues({...values, [name]:e.target.value}); changed()}} />
+      </label>)}
+    {schema.private.map(name => <div key={name} style={ui.field}>
+      <label style={ui.field}>{copy.field[name]}
+        <input style={ui.input} type="password" name={'prism-' + channel + '-' + name}
+          autoComplete="new-password" spellCheck={false}
+          value={passwords[name] ?? ''} placeholder={view.secrets[name] ? copy.keep : undefined}
+          onChange={e => {setPasswords({...passwords, [name]:e.target.value});setClear(clear.filter(k => k !== name));changed()}} />
+      </label>
+      <small>{view.secrets[name] ? copy.credentialStored : copy.credentialEmpty}</small>
+      {view.secrets[name] && channel !== 'feishu' && <label style={ui.row}>
+        <input type="checkbox" checked={clear.includes(name)} onChange={e => {
+          setClear(e.target.checked ? [...clear,name] : clear.filter(k => k !== name))
+          setPasswords({...passwords,[name]:''}); changed()
+        }} />{copy.removeSecret} · {copy.field[name]}</label>}
+    </div>)}
+  </>
+
   return <section style={ui.stack} data-prism-channel-panel={channel}>
     <div style={ui.panel}>
       <h3 style={{ margin: 0 }}>{copy.names[channel]}</h3>
@@ -202,34 +241,12 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
       </label>}
       <form style={ui.stack} autoComplete="off" onSubmit={e => {e.preventDefault(); void save(view.enabled, true)}}>
         <fieldset style={ui.formFields} disabled={busy}>
-          <label style={ui.field}>{copy.username}
+          {channel !== 'feishu' && <label style={ui.field}>{copy.username}
             <input style={ui.input} name="username" value={username} maxLength={256} required={!configured(view)}
               placeholder={accountName(view)} spellCheck={false} onChange={e => {setUsername(e.target.value); changed()}} />
-          </label>
-          {schema.public.map(name => name === 'domain' ?
-            <label key={name} style={ui.field}>{copy.field[name]}
-              <select style={ui.input} value={String(values[name] ?? '')} onChange={e => {setValues({...values, [name]:e.target.value}); changed()}}>
-                <option value="">{copy.automatic}</option><option value="feishu">{copy.names.feishu.split(' / ')[0]}</option><option value="lark">Lark</option>
-              </select>
-            </label> :
-            <label key={name} style={ui.field}>{copy.field[name]}
-              <input style={ui.input} name={name} value={String(values[name] || '')} spellCheck={false}
-                type={name === 'apiBase' ? 'url' : 'text'} onChange={e => {setValues({...values, [name]:e.target.value}); changed()}} />
-            </label>)}
-          {schema.private.map(name => <div key={name} style={ui.field}>
-            <label style={ui.field}>{copy.field[name]}
-              <input style={ui.input} type="password" name={'prism-' + channel + '-' + name}
-                autoComplete="new-password" spellCheck={false}
-                value={passwords[name] ?? ''} placeholder={view.secrets[name] ? copy.keep : undefined}
-                onChange={e => {setPasswords({...passwords, [name]:e.target.value});setClear(clear.filter(k => k !== name));changed()}} />
-            </label>
-            <small>{view.secrets[name] ? copy.credentialStored : copy.credentialEmpty}</small>
-            {view.secrets[name] && <label style={ui.row}>
-              <input type="checkbox" checked={clear.includes(name)} onChange={e => {
-                setClear(e.target.checked ? [...clear,name] : clear.filter(k => k !== name))
-                setPasswords({...passwords,[name]:''}); changed()
-              }} />{copy.removeSecret} · {copy.field[name]}</label>}
-          </div>)}
+          </label>}
+          {channel === 'feishu' ? <FeishuBinding binding={view.feishu} copy={copy} mode={feishuMode} disabled={busy}
+            manual={credentials} onMode={mode => {setFeishuMode(mode); changed()}} onRegistered={() => void syncRegistration()} /> : credentials}
           <label style={ui.field}>{copy.permissions}
             <textarea style={ui.input} rows={2} value={ids} spellCheck={false} onChange={e => {setIds(e.target.value);changed()}} />
             <small>{copy.listHint}</small>
@@ -246,7 +263,7 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
         {message && <div role={failed ? 'alert' : 'status'}>{message}</div>}
       </form>
     </div>
-    {(channel === 'wechat' || channel === 'feishu') && <ImQr channel={channel} copy={copy} registered={view.registered} onRegistered={() => void syncRegistration()} />}
+    {channel === 'wechat' && <ImQr channel={channel} copy={copy} registered={view.registered} onRegistered={() => void syncRegistration()} />}
     <Pairing channel={channel} copy={copy} />
   </section>
 }
@@ -324,7 +341,8 @@ export function ImSettings({ copy }: {copy: ImCopy}) {
       <ChannelForm key={card.channel + epoch} view={card} copy={copy} update={update} reload={reload} cancel={() => setEditing(undefined)} /> :
       <button key={card.channel} type="button" style={{...ui.button, ...ui.summary}} data-prism-channel-card={card.channel}
         disabled={Boolean(view)} onClick={() => setEditing(card.channel)}>
-        <strong>{copy.names[card.channel]}</strong><span style={ui.accountName}>{accountName(card) ?? copy.unnamed}</span>
+        <strong>{copy.names[card.channel]}</strong><span style={ui.accountName}>
+          {accountName(card) ?? (card.channel === 'feishu' ? copy.nicknameUnavailable : copy.unnamed)}</span>
       </button>)}
     {!view && <div><button type="button" style={ui.button} onClick={reload}>{copy.load}</button></div>}
   </section>

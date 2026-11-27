@@ -33,8 +33,8 @@ function CodeImage({ payload, channel, copy }: { payload: string; channel: Login
   </div>
 }
 
-export function ImQr({ channel, copy, registered, onRegistered }: {
-  channel: LoginChannel; copy: ImCopy; registered: boolean; onRegistered(): void
+export function ImQr({ channel, copy, registered, onRegistered, disabled }: {
+  channel: LoginChannel; copy: ImCopy; registered: boolean; onRegistered(): void; disabled?: boolean
 }) {
   const [session, setSession] = useState<LoginView>()
   const [busy, setBusy] = useState<'' | 'start' | 'cancel' | 'code'>('')
@@ -123,19 +123,19 @@ export function ImQr({ channel, copy, registered, onRegistered }: {
   const showCode = pending && Boolean(session?.url)
   return <section data-prism-login={channel} data-state={phase} style={ui.panel}>
     <h4 style={{ margin: 0 }}>{copy.login}</h4>
-    <p style={{ margin: 0 }}>{copy.qrHelp}</p>
+    <p style={{ margin: 0 }}>{channel === 'feishu' ? copy.feishuScanHelp : copy.qrHelp}</p>
     {registered && <strong>{copy.savedLogin}</strong>}
     <div role="status">{copy.phase[phase]}</div>
     {showCode && <CodeImage key={session!.url} payload={session!.url!} channel={channel} copy={copy} />}
     {pending && session?.expiresAt && <span>{copy.expires} {new Date(session.expiresAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>}
-    {session?.status === 'code' && <form onSubmit={e => {e.preventDefault(); if (pin.trim()) void act('code')}} style={ui.row}>
+    {channel === 'wechat' && session?.status === 'code' && <form onSubmit={e => {e.preventDefault(); if (pin.trim()) void act('code')}} style={ui.row}>
       <label data-prism-qr="" style={ui.field}>{copy.code}
         <input type="password" inputMode="numeric" autoComplete="one-time-code" value={pin} style={ui.input} onChange={e => setPin(e.target.value)} />
       </label><button type="submit" style={ui.button} disabled={!!busy || !pin.trim()}>{copy.submit}</button>
     </form>}
     {error && <p role="alert">{error}</p>}
     <div style={ui.row}>
-      {!pending && <button type="button" data-prism-qr-start="" style={ui.button} disabled={!!busy}
+      {!pending && <button type="button" data-prism-qr-start="" style={ui.button} disabled={disabled || !!busy}
         onClick={() => void act('start')}>{phase === 'idle' ? copy.start : copy.retry}</button>}
       {pending && loginId && <button type="button" data-prism-qr-cancel="" style={ui.button} disabled={!!busy}
         onClick={() => void act('cancel')}>{copy.cancel}</button>}

@@ -2,6 +2,14 @@ export const channels = ['telegram', 'wechat', 'feishu', 'wecom', 'qq', 'onebot'
 export type Channel = typeof channels[number]
 export type LoginChannel = 'wechat' | 'feishu'
 export type ChannelStatus = 'disabled' | 'starting' | 'running' | 'error'
+export type FeishuMode = 'manual' | 'scan'
+export interface FeishuBindingView {
+  mode: FeishuMode
+  appId: string
+  domain: 'feishu' | 'lark'
+  secretStored: boolean
+  nickname?: string
+}
 export interface ChannelView {
   channel: Channel
   revision: number
@@ -12,6 +20,7 @@ export interface ChannelView {
   fields: Record<string, string | string[]>
   secrets: Record<string, boolean>
   registered: boolean
+  feishu?: FeishuBindingView
 }
 export type LoginStatus = 'starting' | 'waiting' | 'code' | 'complete' | 'cancelled' | 'expired' | 'error'
 export interface LoginView {
