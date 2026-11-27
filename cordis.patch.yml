@@ -1,4 +1,6 @@
 - insert:
+    - id: dsh-loader
+      name: '@dsh-plugin/dsh-loader'
     - id: dsh-concierge-ui
       name: '@dsh-prism/dsh-concierge-ui'
       config:

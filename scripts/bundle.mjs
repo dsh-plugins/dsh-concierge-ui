@@ -37,7 +37,7 @@ await build({
   platform: 'browser',
   target: 'es2022',
   minify: true,
-  external: ['react', 'react/jsx-runtime'],
+  external: ['react', 'react/jsx-runtime', 'react-dom', 'react-dom/client', '@dsh-plugin/dsh-loader/client'],
   banner: { js: "window.__ModuleLoader__.load({id:'@dsh-prism/dsh-concierge-ui',factory:require=>{const module={exports:{}};const exports=module.exports;" },
   footer: { js: 'return module.exports}});' },
 })

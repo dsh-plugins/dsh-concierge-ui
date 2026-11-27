@@ -2,12 +2,13 @@ import { useSyncExternalStore } from 'react'
 import type { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import type { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SidebarFooterActionOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
-import type { SettingsSectionIconOwnerProps } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigForms, SettingsSectionIconOwnerProps } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { settingsCopy } from './settings-copy.js'
 import { ImSettings } from './ImSettings.js'
 import { imCopy } from './im-copy.js'
 import { ui } from './im-style.js'
 import { PrismShortcut } from './PrismShortcut.js'
+import { ModelSettings, modelSettingsNamespace, type ModelDirectoryRemote, type ModelSelections } from './ModelSettings.js'
 
 const configSection = 'prism-projects'
 const imSection = 'prism-im'
@@ -22,24 +23,29 @@ function SettingsIcon({ size, section }: { size: number; section: 'config' | 'im
   </svg>
 }
 
-export const inject = ['slots', 'locale']
+export const inject = ['slots', 'locale', 'configForms', 'remote', 'remote.session', 'dshLoaderUi']
 interface BrowserContext {
   locale: Pick<LocaleRuntime, 'subscribe' | 'getSnapshot'>
+  configForms: Pick<ConfigForms, 'get'>
+  remote: ModelDirectoryRemote
   slots: Pick<SlotCore, 'register'> & {
     inject(name: 'settings.section' | 'settings.section.icon' | 'sidebar.footer.action', mount: () => () => void): void
   }
 }
 export function apply(ctx: BrowserContext) {
+  const modelForm = ctx.configForms.get<ModelSelections>(modelSettingsNamespace)
   function useLanguage() {
     return useSyncExternalStore(listener => ctx.locale.subscribe(listener), () => ctx.locale.getSnapshot().active)
   }
   function PrismSettings() {
-    const copy = settingsCopy(useLanguage())
+    const language = useLanguage()
+    const copy = settingsCopy(language)
     return <section style={{ display: 'grid', gap: 14, maxWidth: 620, padding: '8px 0 20px' }}>
       <h2 style={{ margin: 0 }}>{copy.title}</h2>
       <p style={{ margin: 0 }}>{copy.workspaceHelp}</p>
       <p style={{ margin: 0 }}>{copy.modelHelp}</p>
       <div><button type="button" style={ui.button} onClick={() => window.location.assign('/prism')}>{copy.open}</button></div>
+      <ModelSettings form={modelForm} remote={ctx.remote} language={language} />
     </section>
   }
   function PrismIm() {

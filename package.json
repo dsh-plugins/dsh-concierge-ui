@@ -74,10 +74,13 @@
     "client": {
       "platform": "web",
       "inject": [
+        "@dsh-plugin/dsh-loader",
+        "@deepseek-ai/dsh-api-remotes",
         "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-ui-sidebar",
         "@deepseek-ai/dsh-client-locale"
-      ]
+      ],
+      "external": ["@dsh-plugin/dsh-loader/client"]
     }
   }
 }
