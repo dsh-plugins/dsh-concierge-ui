@@ -49,29 +49,21 @@ function Message({ item }: { item: PublicMessage }) {
   )
 }
 
-function Task({ task, childrenByParent }: {
-  task: TaskCard
-  childrenByParent: Map<string, TaskCard[]>
-}) {
+function Task({ task }: { task: TaskCard }) {
   const { label, tone } = states[task.status]
   return (
     <Card variant="flat" bodyStyle={{ padding: 0 }} className="prism-task-surface">
-      <details className="task" data-task={task.id}>
-        <summary>
-          <span className="task-glyph" aria-hidden="true" />
-          <span className="task-name">
-            {!task.parentId && <small>{copy.task}</small>}
-            <strong title={task.title}>{task.title}</strong>
+      <div className="task" data-task={task.id}>
+        <span className="task-glyph" aria-hidden="true" />
+        <span className="task-name">
+          <span className="task-meta">
+            <small>{copy.task}</small>
+            <Timestamp at={task.at} />
           </span>
-          <Tag className={'status ' + task.status} tone={tone}>{label}</Tag>
-          <i className="chevron" aria-hidden="true" />
-        </summary>
-        <div className="task-body">
-          <Timestamp at={task.at} />
-          {childrenByParent.get(task.id)?.map(child =>
-            <Task key={child.id} task={child} childrenByParent={childrenByParent} />)}
-        </div>
-      </details>
+          <strong title={task.title}>{task.title}</strong>
+        </span>
+        <Tag className={'status ' + task.status} tone={tone}>{label}</Tag>
+      </div>
     </Card>
   )
 }
@@ -92,17 +84,12 @@ export function Timeline({ view }: { view: ConversationView }) {
     }
   }, [view.messages, view.tasks])
 
-  const children = new Map<string, TaskCard[]>()
   const rows = view.messages.map(item => ({
     at: item.at, node: <Message key={'message-' + item.id} item={item} />,
   }))
   for (const task of view.tasks) {
-    if (task.parentId) {
-      const group = children.get(task.parentId) ?? []
-      group.push(task)
-      children.set(task.parentId, group)
-    } else {
-      rows.push({ at: task.at, node: <Task key={'task-' + task.id} task={task} childrenByParent={children} /> })
+    if (!task.parentId) {
+      rows.push({ at: task.at, node: <Task key={'task-' + task.id} task={task} /> })
     }
   }
   rows.sort((a, b) => a.at.localeCompare(b.at))

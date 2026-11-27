@@ -64,7 +64,6 @@ button:disabled {
   cursor: default;
 }
 button:focus-visible,
-summary:focus-visible,
 textarea:focus-visible {
   outline: 2px solid #23765b;
   outline-offset: 4px;
@@ -413,18 +412,11 @@ kbd {
   border-radius: 14px;
   overflow: hidden;
   background: var(--card);
-}
-.task summary {
   display: flex;
   gap: 10px;
   align-items: center;
   font-size: 13px;
   padding: 13px 15px;
-  cursor: pointer;
-  list-style: none;
-}
-.task summary::-webkit-details-marker {
-  display: none;
 }
 .task strong {
   font-weight: 550;
@@ -437,6 +429,7 @@ kbd {
 .speaker strong { color: var(--secondary); font-weight: 600; }
 .speaker time { color: var(--muted); font-size: 10px; }
 .task-name { flex: 1; display: grid; gap: 3px; min-width: 0; }
+.task-meta { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
 .task-name small { color: var(--muted); font-size: 10px; letter-spacing: .08em; }
 .status { display: inline-flex; align-items: center; gap: 5px; }
 .status:before { content: ''; background: currentColor; width: 5px; height: 5px; border-radius: 50%; }
@@ -474,16 +467,7 @@ kbd {
   background: #fbeae6;
   color: #944b3b;
 }
-.task[open] > summary .chevron {
-  transform: rotate(225deg);
-  margin-bottom: -3px;
-}
-.task-body {
-  border-top: 1px solid var(--line);
-  padding: 12px 15px;
-}
 .prism-task-surface.arco-card { border: 0; border-radius: 14px; overflow: hidden; }
-.task-body .prism-task-surface { margin-top: 10px; }
 @media (max-width: 560px) {
   .topbar {
     height: 60px;
@@ -506,7 +490,7 @@ kbd {
   .message {
     max-width: 95%;
   }
-  .task summary {
+  .task {
     padding: 12px 10px;
   }
   .key-hint {
@@ -527,7 +511,6 @@ kbd {
 }
 @media (prefers-reduced-motion: no-preference) {
   button,
-  .task,
   #composer .model-toggle {
     transition:
       background 0.15s,
