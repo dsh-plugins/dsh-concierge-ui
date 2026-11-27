@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { admin, AdminError, editedFields, fields, publicFields, savedSecrets, type Channel, type ChannelView } from './im-admin.js'
 import type { ImCopy } from './im-copy.js'
 import { ImQr } from './ImQr.js'
@@ -252,15 +252,12 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
 }
 
 export function ImSettings({ copy }: {copy: ImCopy}) {
-  const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<Channel>()
   const [views, setViews] = useState<ChannelView[]>()
   const [readError, setReadError] = useState('')
   const [refresh, setRefresh] = useState(0)
   const [epoch, setEpoch] = useState(0)
   const discardOnRead = useRef(false)
-  const addButton = useRef<HTMLButtonElement>(null)
-  const choiceId = useId()
   useEffect(() => {
     const controller = new AbortController()
     readChannels(controller.signal).then(incomingViews => {
@@ -307,23 +304,18 @@ export function ImSettings({ copy }: {copy: ImCopy}) {
   const cards = view && !configured(view) ? [...saved, view] : saved
   return <section style={{ ...ui.stack, maxWidth: 620, padding: '8px 0 20px' }}>
     <h2 style={{ margin: 0 }}>{copy.title}</h2>
-    {!!available.length && <div style={ui.stack} onKeyDown={event => {
-      if (event.key === 'Escape' && adding) {
-        event.stopPropagation()
-        setAdding(false)
-        addButton.current?.focus()
-      }
-    }}>
-      <div><button type="button" ref={addButton} style={ui.button} aria-controls={choiceId} aria-expanded={adding}
-        disabled={Boolean(view)} onClick={() => setAdding(!adding)}>{copy.add}</button></div>
-      <div id={choiceId} role="group" aria-label={copy.channel} hidden={!adding || Boolean(view)}>
-        <div style={ui.choices}>
-          {available.map(({ channel }) => <button key={channel} type="button" style={ui.button} onClick={() => {
-            setAdding(false)
-            setEditing(channel)
-          }}>{copy.names[channel]}</button>)}
-        </div>
-      </div>
+    {!!available.length && <div>
+      <select aria-label={copy.add} value="" style={ui.channelSelect} disabled={Boolean(view)} onChange={event => {
+        const choice = available.find(({ channel }) => channel === event.currentTarget.value)
+        if (choice) {
+          setEditing(choice.channel)
+        }
+      }}>
+        <option value="" disabled>{copy.add}</option>
+        <optgroup label={copy.channel}>
+          {available.map(({ channel }) => <option key={channel} value={channel}>{copy.names[channel]}</option>)}
+        </optgroup>
+      </select>
     </div>}
     {readError && <p role="alert">{readError}</p>}
     {!views && !readError && <p role="status">{copy.loading}</p>}
@@ -331,7 +323,7 @@ export function ImSettings({ copy }: {copy: ImCopy}) {
     {cards.map(card => card.channel === editing ?
       <ChannelForm key={card.channel + epoch} view={card} copy={copy} update={update} reload={reload} cancel={() => setEditing(undefined)} /> :
       <button key={card.channel} type="button" style={{...ui.button, ...ui.summary}} data-prism-channel-card={card.channel}
-        disabled={Boolean(view)} onClick={() => {setAdding(false); setEditing(card.channel)}}>
+        disabled={Boolean(view)} onClick={() => setEditing(card.channel)}>
         <strong>{copy.names[card.channel]}</strong><span style={ui.accountName}>{accountName(card) ?? copy.unnamed}</span>
       </button>)}
     {!view && <div><button type="button" style={ui.button} onClick={reload}>{copy.load}</button></div>}
