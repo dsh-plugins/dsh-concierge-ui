@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { Scrollbar } from '@dsh-plugin/dsh-loader/client'
-import { DshProvider, PanelShell } from '@dsh-plugin/dsh-ui-components'
+import { PanelShell } from '@dsh-plugin/dsh-ui-components'
 import { modelSettingsCopy } from './model-settings-copy.js'
 import { modelSettingsStyle } from './model-settings-style.js'
 import { ui } from './im-style.js'
@@ -78,31 +78,29 @@ function Editor({ layer, model, copy, save, close }: {
   }
 
   return <div style={{display: 'contents'}} onKeyDown={event => event.stopPropagation()}>
-    <DshProvider style={{display: 'contents'}}>
-      <PanelShell title={copy.edit.replace('{model}', () => model.name)} onClose={saving ? undefined : close}
-        className="prism-model-dialog" footer={<>
-          <button type="button" style={ui.button} disabled={saving} onClick={close}>{copy.cancel}</button>
-          <button type="submit" form={formId} style={ui.button} disabled={saving}>{saving ? copy.saving : copy.save}</button>
-        </>}>
-        <form id={formId} className="prism-model-editor-fields" onSubmit={event => {
-          event.preventDefault()
-          if (!saving) {
-            void submit()
-          }
-        }}>
-          <small>{layer} · {model.provider}/{model.model}</small>
-          <label>{copy.description}
-            <textarea rows={3} maxLength={2000} value={description} placeholder={model.description}
-              disabled={saving} onChange={event => setDescription(event.currentTarget.value)} />
-          </label>
-          <label>{copy.prompt}
-            <textarea rows={6} maxLength={16000} value={prompt}
-              disabled={saving} onChange={event => setPrompt(event.currentTarget.value)} />
-          </label>
-          {error && <div role="alert">{error}</div>}
-        </form>
-      </PanelShell>
-    </DshProvider>
+    <PanelShell title={copy.edit.replace('{model}', () => model.name)} onClose={saving ? undefined : close}
+      className="prism-model-dialog" footer={<>
+        <button type="button" style={ui.button} disabled={saving} onClick={close}>{copy.cancel}</button>
+        <button type="submit" form={formId} style={ui.button} disabled={saving}>{saving ? copy.saving : copy.save}</button>
+      </>}>
+      <form id={formId} className="prism-model-editor-fields" onSubmit={event => {
+        event.preventDefault()
+        if (!saving) {
+          void submit()
+        }
+      }}>
+        <small>{layer} · {model.provider}/{model.model}</small>
+        <label>{copy.description}
+          <textarea rows={3} maxLength={2000} value={description} placeholder={model.description}
+            disabled={saving} onChange={event => setDescription(event.currentTarget.value)} />
+        </label>
+        <label>{copy.prompt}
+          <textarea rows={6} maxLength={16000} value={prompt}
+            disabled={saving} onChange={event => setPrompt(event.currentTarget.value)} />
+        </label>
+        {error && <div role="alert">{error}</div>}
+      </form>
+    </PanelShell>
   </div>
 }
 
@@ -188,6 +186,7 @@ export function ModelSettings({ form, remote, language }: {
   const locked = saving || !snapshot.writable || snapshot.revision === undefined || snapshot.status !== 'ready'
   const hasRules = layers.some(layer => snapshot.value?.[layer]?.length)
   const hasModels = directory.groups.some(group => group.models.length)
+  const showCards = hasModels || (hasRules && directory.status !== 'loading')
 
   function renderModel(layer: Layer, model: Candidate) {
     const label = copy.edit.replace('{model}', () => model.name)
@@ -233,7 +232,7 @@ export function ModelSettings({ form, remote, language }: {
       <span>{directory.status === 'failed' ? copy.failed : copy.partial}</span>
       <button type="button" style={ui.button} onClick={() => setRefresh(value => value + 1)}>{copy.refresh}</button>
     </div>}
-    {(hasModels || hasRules) && layers.map(layer => {
+    {showCards && layers.map(layer => {
       const {result, unavailable} = candidates(directory.groups, snapshot.value?.[layer] ?? [])
       return <fieldset key={layer} data-prism-model-layer={layer}>
         <legend>{copy.layer.replace('{layer}', layer)}</legend>
