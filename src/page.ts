@@ -1,24 +1,26 @@
 import { messages, type Language } from './locale.js'
+import { paletteBackground } from './appearance.js'
+import type { ThemePreference } from '@deepseek-ai/dsh-client-ui-theme'
 
 export const faviconPath = '/prism/favicon.svg'
 
-export function documentHtml(nonce: string, language: Language = 'en', integrated = false): string {
+export function documentHtml(nonce: string, language: Language = 'en', integrated = false, appearance: ThemePreference = 'system'): string {
   const copy = messages(language)
   // Catalogs are bundled assets. Escape script delimiters even in an inert JSON block.
   const serialized = JSON.stringify(copy).replaceAll('<', '\\u003c')
 
   return /* HTML */ `
   <!doctype html>
-  <html lang="${language}">
+  <html lang="${language}" data-ds-theme-source="${appearance}">
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-      <meta name="theme-color" content="#fafbf8" />
+      <meta name="theme-color" content="${paletteBackground[appearance === 'dark' ? 'dark' : 'light']}" />
       <link rel="icon" type="image/svg+xml" href="${faviconPath}" />
       <link rel="stylesheet" href="/prism/style.css" />
       <title>${copy.title}</title>
     </head>
-    <body>
+    <body${appearance === 'dark' ? ' data-ds-dark-theme arco-theme="dark"' : ''}>
       <div id="root" data-integrated="${integrated}"></div>
       <noscript>${copy.noScript}</noscript>
       <script type="application/json" id="prism-copy" nonce="${nonce}">${serialized}</script>
@@ -28,10 +30,45 @@ export function documentHtml(nonce: string, language: Language = 'en', integrate
 `
 }
 
+const darkPalette = /* CSS */ `
+  color-scheme: dark;
+  --paper: ${paletteBackground.dark};
+  --card: #1e2a24;
+  --ink: #e2eee7;
+  --secondary: #bbcfc3;
+  --muted: #a8bdb2;
+  --line: #3c5146;
+  --green: #91d6b7;
+  --pale: #294338;
+  --focus: #79cba6;
+  --topbar: #19241e;
+  --prism-shade: #418667;
+  --model-shadow: #080f0b80;
+  --hero-glow: #3d73515c;
+  --composer-border: #4a6254;
+  --composer-focus: #6ba58c;
+  --composer-glow: #65987928;
+  --composer-shadow: #080f0b54;
+  --send: #97dbb8;
+  --send-hover: #b5e8cc;
+  --send-ink: #14281e;
+  --send-disabled: #304239;
+  --send-disabled-ink: #9aafa3;
+  --feedback: #e6b99a;
+  --task-mark: #8ca899;
+  --status-idle: #2b3b33;
+  --status-running: #493a22;
+  --status-running-ink: #f0cb87;
+  --status-completed: #254437;
+  --status-completed-ink: #9adbba;
+  --status-failed: #48312f;
+  --status-failed-ink: #f2afa4;
+`
+
 export const stylesheet = /* CSS */ `
 :root {
   color-scheme: light;
-  --paper: #fafbf8;
+  --paper: ${paletteBackground.light};
   --card: #fff;
   --ink: #172c27;
   --secondary: #50645d;
@@ -39,11 +76,38 @@ export const stylesheet = /* CSS */ `
   --line: #dce4de;
   --green: #14694e;
   --pale: #e7f2e9;
+  --focus: #23765b;
+  --topbar: #fcfdfa;
+  --prism-shade: #215e48;
+  --model-shadow: #193a251c;
+  --hero-glow: #d5e9cda6;
+  --composer-border: #cbd9cd;
+  --composer-focus: #7da38c;
+  --composer-glow: #6598790e;
+  --composer-shadow: #1d44280b;
+  --send: #195d46;
+  --send-hover: #0c4632;
+  --send-ink: #fff;
+  --send-disabled: #e5ece5;
+  --send-disabled-ink: #819688;
+  --feedback: #794c30;
+  --task-mark: #729281;
+  --status-idle: #edf1ed;
+  --status-running: #faf0dd;
+  --status-running-ink: #79561c;
+  --status-completed: #e5f3e9;
+  --status-completed-ink: #23684c;
+  --status-failed: #fbeae6;
+  --status-failed-ink: #944b3b;
   --font: Inter, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif;
   font-family: var(--font);
   color: var(--ink);
   background: var(--paper);
   font-synthesis: none;
+}
+:root[data-ds-theme-source='dark'] {${darkPalette}}
+@media (prefers-color-scheme: dark) {
+  :root[data-ds-theme-source='system'] {${darkPalette}}
 }
 * {
   box-sizing: border-box;
@@ -67,7 +131,7 @@ button:disabled {
 }
 button:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #23765b;
+  outline: 2px solid var(--focus);
   outline-offset: 4px;
 }
 [hidden] {
@@ -88,7 +152,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 0 clamp(18px, 4vw, 60px);
-  background: #fcfdfa;
+  background: var(--topbar);
   position: sticky;
   top: 0;
   z-index: 3;
@@ -105,7 +169,7 @@ textarea:focus-visible {
   font:
     normal italic 19px Georgia,
     serif;
-  color: #62776c;
+  color: var(--muted);
   letter-spacing: -0.05em;
   border-left: 1px solid var(--line);
   padding-left: 11px;
@@ -127,7 +191,7 @@ textarea:focus-visible {
   clip-path: polygon(56% 0, 0 72%, 48% 58%);
 }
 .prism i:nth-child(2) {
-  background: #215e48;
+  background: var(--prism-shade);
   clip-path: polygon(0 72%, 48% 58%, 100% 83%, 51% 100%);
 }
 .prism i:nth-child(3) {
@@ -144,7 +208,7 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   gap: 9px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 20px;
   padding: 5px 13px;
@@ -174,7 +238,7 @@ textarea:focus-visible {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card);
-  box-shadow: 0 12px 32px #193a251c;
+  box-shadow: 0 12px 32px var(--model-shadow);
   color: var(--ink);
 }
 .prism-model-popup .arco-popover-inner { padding: 8px; }
@@ -222,7 +286,7 @@ main.empty {
   margin: auto;
   display: grid;
   place-items: center;
-  background: radial-gradient(ellipse, #d5e9cda6, transparent 68%);
+  background: radial-gradient(ellipse, var(--hero-glow), transparent 68%);
 }
 .hero-symbol .prism {
   width: 51px;
@@ -257,16 +321,16 @@ h1 {
 }
 #composer {
   background: var(--card);
-  border: 1px solid #cbd9cd;
+  border: 1px solid var(--composer-border);
   border-radius: 20px;
   padding: 16px 15px 12px 20px;
-  box-shadow: 0 6px 22px #1d44280b;
+  box-shadow: 0 6px 22px var(--composer-shadow);
 }
 #composer:focus-within {
-  border-color: #7da38c;
+  border-color: var(--composer-focus);
   box-shadow:
-    0 0 0 3px #6598790e,
-    0 6px 22px #1d44280b;
+    0 0 0 3px var(--composer-glow),
+    0 6px 22px var(--composer-shadow);
 }
 #draft {
   border: 0;
@@ -311,21 +375,21 @@ kbd {
   flex-shrink: 0;
   border: 0;
   border-radius: 50%;
-  background: #195d46;
-  color: white;
+  background: var(--send);
+  color: var(--send-ink);
 }
 #send:hover:not(:disabled) {
-  background: #0c4632;
+  background: var(--send-hover);
 }
 #send svg { display: block; }
 #send:disabled {
-  background: #e5ece5;
-  color: #819688;
+  background: var(--send-disabled);
+  color: var(--send-disabled-ink);
 }
 #feedback {
   font-size: 12px;
   line-height: 1.6;
-  color: #794c30;
+  color: var(--feedback);
   text-align: center;
   min-height: 22px;
   margin: 5px 0 0;
@@ -460,7 +524,7 @@ kbd {
 .task-glyph {
   width: 13px;
   height: 14px;
-  border: 1.4px solid #729281;
+  border: 1.4px solid var(--task-mark);
   border-radius: 3px;
   position: relative;
   flex-shrink: 0;
@@ -469,27 +533,27 @@ kbd {
   content: '';
   position: absolute;
   inset: 4px 2px;
-  border-block: 1px solid #729281;
+  border-block: 1px solid var(--task-mark);
 }
 .status {
   font-size: 11px;
   white-space: nowrap;
   color: var(--secondary);
   border-radius: 10px;
-  background: #edf1ed;
+  background: var(--status-idle);
   padding: 2px 7px;
 }
 .status.running {
-  background: #faf0dd;
-  color: #79561c;
+  background: var(--status-running);
+  color: var(--status-running-ink);
 }
 .status.completed {
-  background: #e5f3e9;
-  color: #23684c;
+  background: var(--status-completed);
+  color: var(--status-completed-ink);
 }
 .status.failed {
-  background: #fbeae6;
-  color: #944b3b;
+  background: var(--status-failed);
+  color: var(--status-failed-ink);
 }
 .prism-task-surface.arco-card { border: 0; border-radius: 14px; overflow: hidden; }
 @media (max-width: 560px) {

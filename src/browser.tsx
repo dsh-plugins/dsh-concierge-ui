@@ -1,4 +1,5 @@
 import { copy } from './client-locale.js'
+import { startAppearance } from './appearance.js'
 import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Button, DshProvider } from '@dsh-plugin/dsh-ui-components'
@@ -39,6 +40,9 @@ function Concierge() {
       disconnect()
       const source = new EventSource(api + '/events')
       events = source
+      source.addEventListener('appearance', event => {
+        if (source === events) { setAppearance(event.data) }
+      })
       source.onmessage = (event) => {
         if (source !== events) return
         const next = JSON.parse(event.data) as ConversationView
@@ -151,4 +155,5 @@ function Concierge() {
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root mount point')
 const integrated = root.dataset.integrated === 'true'
+const setAppearance = startAppearance()
 createRoot(root).render(<Concierge />)

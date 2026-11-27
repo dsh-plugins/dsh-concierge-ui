@@ -1,5 +1,6 @@
 import { messages, selectLanguage } from './locale.js'
 import type {} from '@deepseek-ai/dsh-settings'
+import { DEFAULT_PREFERENCE, THEME_PREFERENCE_FIELD, THEME_SETTINGS_NAMESPACE, type ThemePreference } from '@deepseek-ai/dsh-client-ui-theme'
 import type { WebCopy } from './locale-types.js'
 import { randomBytes } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
@@ -11,6 +12,7 @@ import type { ConversationView, MediaAsset } from './conversation.js'
 import { documentHtml, faviconPath, stylesheet } from './page.js'
 import { missingReply } from './delivery.js'
 import { openPrismOnLoad } from './navigation.js'
+import { isAppearance } from './appearance.js'
 
 export const name = 'dsh-concierge-ui'
 export const inject = ['webServer']
@@ -25,6 +27,12 @@ interface ConversationService {
   selectModel(owner: string, id: string): Promise<ConversationView>
   trace(owner: string, taskId: string): Promise<TraceEntry[]>
   subscribe(owner: string, listener: (view: ConversationView) => void): () => void
+}
+
+/** Live appearance preference shared by the HTML route and its authenticated streams. */
+interface AppearanceSettings {
+  current(): ThemePreference
+  subscribe(listener: (preference: ThemePreference) => void): () => void
 }
 
 const pages = new Set(['/index.html', '/prism', '/prism/'])
@@ -180,6 +188,7 @@ async function streamView(
   response: ServerResponse,
   signal: AbortSignal,
   copy: WebCopy,
+  appearance?: AppearanceSettings,
 ) {
   response.writeHead(200, {
     ...securityHeaders,
@@ -190,6 +199,15 @@ async function streamView(
   let received = false,
     paused = false
   let latest: ConversationView | undefined
+  let latestAppearance: ThemePreference | undefined
+  const emitAppearance = (preference: ThemePreference) => {
+    if (response.destroyed || response.writableEnded) { return }
+    if (paused) {
+      latestAppearance = preference
+      return
+    }
+    paused = !response.write(`event: appearance\ndata: ${preference}\n\n`)
+  }
   const emit = (view: ConversationView) => {
     received = true
     if (response.destroyed || response.writableEnded) return
@@ -201,11 +219,16 @@ async function streamView(
   }
   const drain = () => {
     paused = false
+    const preference = latestAppearance
+    latestAppearance = undefined
+    if (preference) { emitAppearance(preference) }
     const snapshot = latest
     latest = undefined
     if (snapshot) emit(snapshot)
   }
   response.on('drain', drain)
+  emitAppearance(appearance?.current() ?? DEFAULT_PREFERENCE)
+  const unsubscribeAppearance = appearance?.subscribe(emitAppearance)
   const unsubscribe = core.subscribe(owner, emit)
   const heartbeat = setInterval(() => {
     if (!paused) paused = !response.write(': heartbeat\n\n')
@@ -214,6 +237,7 @@ async function streamView(
   const revoke = () => response.end()
   const cleanup = () => {
     clearInterval(heartbeat)
+    unsubscribeAppearance?.()
     unsubscribe()
     response.removeListener('drain', drain)
     signal.removeEventListener('abort', revoke)
@@ -243,6 +267,7 @@ export function createRoutes(
   componentCss = '',
   hostPreference: () => string | undefined = () => undefined,
   integrated = false,
+  appearance?: AppearanceSettings,
 ): WebRoute[] {
   const css = componentCss + '\n' + stylesheet
   const handler: WebRoute['handler'] = async (req, res, peer) => {
@@ -272,7 +297,7 @@ export function createRoutes(
               "style-src 'self'", `style-src 'self' 'nonce-${nonce}'; style-src-attr 'unsafe-inline'`,
             ),
           })
-          res.end(req.method === 'HEAD' ? undefined : documentHtml(nonce, language, integrated))
+          res.end(req.method === 'HEAD' ? undefined : documentHtml(nonce, language, integrated, appearance?.current()))
           return
         }
         if (path === faviconPath) {
@@ -302,7 +327,7 @@ export function createRoutes(
       if (write && req.headers['x-prism-request'] !== '1') throw new RequestError(403, 'origin')
       if (!core) throw new RequestError(503, 'starting')
       if (path === `${api}/events`) {
-        await streamView(core, owner, res, peer.signal, copy)
+        await streamView(core, owner, res, peer.signal, copy, appearance)
         return
       }
       if (path === `${api}/trace`) {
@@ -348,6 +373,33 @@ export function createRoutes(
 }
 
 export interface Config { integrated?: boolean }
+
+function hostAppearance(ctx: Context): AppearanceSettings {
+  const subscribers = new Set<(preference: ThemePreference) => void>()
+  const read = () => {
+    const descriptor = ctx.get('settings')?.describe({ redactSecrets: true }).find(entry => entry.ns === THEME_SETTINGS_NAMESPACE)
+    const value = (descriptor?.value as Record<string, unknown> | undefined)?.[THEME_PREFERENCE_FIELD]
+    return isAppearance(value) ? value : DEFAULT_PREFERENCE
+  }
+  let preference: ThemePreference | undefined
+  ctx.on('settings/document-updated', ns => {
+    if (ns !== THEME_SETTINGS_NAMESPACE) { return }
+    // Settings emits before finishing its descriptor, so read the effective value afterward.
+    queueMicrotask(() => {
+      const next = read()
+      if (next === preference) { return }
+      preference = next
+      for (const listener of subscribers) { listener(next) }
+    })
+  })
+  return {
+    current: () => preference ??= read(),
+    subscribe(listener) {
+      subscribers.add(listener)
+      return () => { subscribers.delete(listener) }
+    },
+  }
+}
 
 export async function apply(ctx: Context, config: Config = {}) {
   // The native remote-connection plugin owns the exact root. Preserve the token
@@ -395,7 +447,8 @@ export async function apply(ctx: Context, config: Config = {}) {
     }
     return preference ?? undefined
   }
-  for (const route of createRoutes(() => ctx.get('prism') as ConversationService | undefined, js, css, hostPreference, config.integrated)) {
+  const appearance = hostAppearance(ctx)
+  for (const route of createRoutes(() => ctx.get('prism') as ConversationService | undefined, js, css, hostPreference, config.integrated, appearance)) {
     ctx.effect(() => ctx.webServer.register(route), `concierge ${route.path}`)
   }
 }

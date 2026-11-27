@@ -118,7 +118,7 @@ test('Prism negotiates native DSH languages for both the browser and API errors'
     const copy = messages(language)
     assert.deepEqual(Object.keys(copy).sort(), keys)
     const html = documentHtml('nonce', language)
-    assert.ok(html.includes(`<html lang="${language}">`))
+    assert.ok(html.includes(`<html lang="${language}"`))
     assert.ok(html.includes(`<title>${copy.title}</title>`))
     const payload = JSON.parse(/id="prism-copy"[^>]*>([^<]*)<\/script>/.exec(html)[1])
     assert.equal(payload.welcome, copy.welcome)
