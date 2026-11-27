@@ -158,17 +158,28 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
         throw new Error('Missing channel registration')
       }
       const refreshed = publicFields(next)
+      const latestUsername = next.username ?? ''
+      const baseUsers = JSON.stringify(base.fields.allowedUserIds)
+      const draftUsers = JSON.stringify(draft.allowedUserIds)
+      const latestUsers = JSON.stringify(refreshed.allowedUserIds)
+      const usersChanged = draftUsers !== baseUsers
+      update(next)
+      if ((nameChanged && latestUsername !== base.username && latestUsername !== username.trim()) ||
+          (usersChanged && latestUsers !== baseUsers && latestUsers !== draftUsers)) {
+        setMessage(copy.conflict)
+        setFailed(true)
+        return
+      }
       setValues(refreshed)
       setClear([])
       setPasswords({})
-      if (JSON.stringify(draft.allowedUserIds) === JSON.stringify(base.fields.allowedUserIds)) {
+      if (!usersChanged) {
         setIds((refreshed.allowedUserIds as string[]).join('\n'))
       }
       if (!nameChanged) {
-        setUsername(next.username ?? '')
+        setUsername(latestUsername)
       }
-      setBase({revision: next.revision, fields: refreshed, username: next.username ?? ''})
-      update(next)
+      setBase({revision: next.revision, fields: refreshed, username: latestUsername})
     } catch (error) {
       if (alive.current) {
         setMessage(describe(error, copy))
