@@ -2,7 +2,8 @@ export const prismOpenedKey = 'dsh-prism:opened'
 export const dshHome = '/?dsh=1'
 
 export const openPrismOnLoad = `(() => {
-  if (location.pathname !== '/' || location.search || location.hash) {
+  if (location.pathname !== '/' || location.search || location.hash ||
+      performance.getEntriesByType('navigation')[0]?.type === 'back_forward') {
     return;
   }
   try {
