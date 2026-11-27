@@ -152,8 +152,15 @@ export function MeshSettings({language}: {language: string}) {
     && turnUrls.length === savedTurnUrls.length && turnUrls.every(url => savedTurnUrls.includes(url))
   const paired = Boolean(saved) && view.nodes.some(node => node.managed)
   const displayedCode = waiting ? waitingCode ?? '' : code
-  const server = serverDraft ?? view.server.config
   const currentServer = view.server.config
+  const draft = serverDraft ?? currentServer
+  const savedAuth = currentServer.ice.auth
+  const draftAuth = draft.ice.auth
+  const sameRealm = draftAuth.mode === savedAuth.mode && draftAuth.realm.trim() === savedAuth.realm
+  const server = {...draft, ice: {...draft.ice, auth: {...draftAuth,
+    hasPassword: sameRealm && Boolean(savedAuth.hasPassword) && draftAuth.username?.trim() === savedAuth.username,
+    hasSecret: sameRealm && Boolean(savedAuth.hasSecret),
+  }}}
   const mayIssue = view.server.status === 'running' && currentServer.enabled && currentServer.ice.enabled
     && currentServer.ice.relay && currentServer.ice.auth.mode === 'shared-secret'
 
