@@ -263,6 +263,7 @@ export function ImSettings({ copy }: {copy: ImCopy}) {
     setRefresh(x => x + 1)
   }
   const saved = views?.filter(configured) ?? []
+  const pausedFeishu = saved.some(card => card.channel === 'feishu' && card.feishu?.secretStored && !card.enabled)
   const available = views?.filter(item => !configured(item)) ?? []
   const cards = view && !configured(view) ? [...saved, view] : saved
   return <section style={{ ...ui.stack, maxWidth: 620, padding: '8px 0 20px' }}>
@@ -290,6 +291,7 @@ export function ImSettings({ copy }: {copy: ImCopy}) {
         <strong>{copy.names[card.channel]}</strong><span style={ui.accountName}>
           {accountName(card) ?? (card.channel === 'feishu' ? copy.nicknameUnavailable : copy.unnamed)}</span>
       </button>)}
+    {pausedFeishu && !view && <p role="status" style={{margin: 0}}>{copy.feishuDisabled}</p>}
     {!view && <div><button type="button" style={ui.button} onClick={reload}>{copy.load}</button></div>}
     <ImApprovals copy={copy} />
   </section>
