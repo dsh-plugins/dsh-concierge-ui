@@ -47,7 +47,7 @@
     "origin": "Unable to verify the request origin.",
     "starting": "The orchestrator is starting.",
     "missingTask": "Task not found.",
-    "noProject": "Add an authorized project in DSH Settings → Prism before sending a message.",
+    "noProject": "No projects are available. Open a workspace in DSH or check this Prism instance’s project configuration.",
     "badModel": "Invalid message or model.",
     "unavailable": "Service unavailable. Please try again."
   }

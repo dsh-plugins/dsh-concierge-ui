@@ -46,7 +46,7 @@
     "origin": "Não foi possível verificar a origem da solicitação.",
     "starting": "O orquestrador está iniciando.",
     "missingTask": "Tarefa não encontrada.",
-    "noProject": "Adicione um projeto autorizado em Configurações do DSH → Prism antes de enviar uma mensagem.",
+    "noProject": "Nenhum projeto disponível. Abra um espaço de trabalho no DSH ou confira a configuração de projetos desta instância do Prism.",
     "badModel": "Mensagem ou modelo inválido.",
     "unavailable": "Serviço indisponível. Tente novamente."
   }

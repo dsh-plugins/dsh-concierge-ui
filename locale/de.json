@@ -46,7 +46,7 @@
     "origin": "Die Herkunft der Anfrage ist unklar.",
     "starting": "Die Aufgabensteuerung startet.",
     "missingTask": "Aufgabe nicht gefunden.",
-    "noProject": "Füge vor dem Senden eines neuen Beitrags unter DSH-Einstellungen → Prism ein autorisiertes Projekt hinzu.",
+    "noProject": "Es sind keine Projekte verfügbar. Öffne einen Arbeitsbereich in DSH oder prüfe die Projektkonfiguration dieser Prism-Instanz.",
     "badModel": "Ungültige Nachricht oder ungültiges Modell.",
     "unavailable": "Dienst nicht verfügbar. Bitte erneut versuchen."
   }
