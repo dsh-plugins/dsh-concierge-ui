@@ -195,7 +195,8 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
                 <span>{copy.attachMedia}</span>
                 <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
                   disabled={busy} onChange={event => {
-                    setFiles(current => [...current, ...Array.from(event.currentTarget.files ?? [])].slice(0, 8))
+                    const selected = Array.from(event.currentTarget.files ?? [])
+                    setFiles(current => [...current, ...selected].slice(0, 8))
                     event.currentTarget.value = ''
                     onEdit?.()
                   }} />
