@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Prism-Chat",
-    "description": "Chat, Modellauswahl, Aufgabenkarten und schreibgeschützter Sitzungsverlauf."
+    "description": "Chat, Modellauswahl und Aufgabenkarten."
   },
   "messages": {
     "title": "Prism · Chat",
@@ -28,10 +28,6 @@
     "running": "In Arbeit",
     "completed": "Abgeschlossen",
     "failed": "Fehlgeschlagen",
-    "input": "Eingabe",
-    "assistant": "Assistent",
-    "tool": "Werkzeug",
-    "system": "System",
     "prismMessage": "Nachricht von Prism",
     "yourMessage": "Deine Nachricht",
     "you": "Du",
@@ -40,12 +36,6 @@
     "noResponse": "Das Modell hat keine Antwort gesendet. Schreibe in das Nachrichtenfeld „Fasse die vorhandenen Aufgabenergebnisse zusammen, ohne die Aufgaben erneut auszuführen.“",
     "task": "Hintergrundaufgabe",
     "step": "Ausführungsschritt",
-    "viewSession": "Sitzung schreibgeschützt ansehen",
-    "session": "Schreibgeschützte Sitzung",
-    "refresh": "Verlauf aktualisieren",
-    "close": "Schließen",
-    "loading": "Sitzung wird geladen…",
-    "noHistory": "Für diese Aufgabe gibt es noch keinen Sitzungsverlauf.",
     "offline": "Verbindung fehlgeschlagen. Bitte erneut versuchen.",
     "requestFailed": "Anfrage fehlgeschlagen ({status}).",
     "json": "Bitte die Anfrage als JSON senden.",

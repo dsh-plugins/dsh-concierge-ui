@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Conversa do Prism",
-    "description": "Conversa, seleção de modelos, cartões de tarefas e histórico somente leitura."
+    "description": "Conversa, seleção de modelos e cartões de tarefas."
   },
   "messages": {
     "title": "Prism · Conversa",
@@ -28,10 +28,6 @@
     "running": "Em andamento",
     "completed": "Concluída",
     "failed": "Falhou",
-    "input": "Entrada",
-    "assistant": "Assistente",
-    "tool": "Ferramenta",
-    "system": "Sistema",
     "prismMessage": "Mensagem do Prism",
     "yourMessage": "Sua mensagem",
     "you": "Você",
@@ -40,12 +36,6 @@
     "noResponse": "O modelo não enviou uma resposta. No campo de mensagem, peça “Resuma os resultados das tarefas existentes sem executá-las novamente”.",
     "task": "Tarefa em segundo plano",
     "step": "Etapa de execução",
-    "viewSession": "Ver sessão somente leitura",
-    "session": "Sessão somente leitura",
-    "refresh": "Atualizar histórico",
-    "close": "Fechar",
-    "loading": "Carregando sessão…",
-    "noHistory": "Esta tarefa ainda não tem histórico.",
     "offline": "Falha na conexão. Tente novamente.",
     "requestFailed": "Falha na solicitação ({status}).",
     "json": "Envie a solicitação em JSON.",

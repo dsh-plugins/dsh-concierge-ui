@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "棱镜对话",
-    "description": "对话、模型选择、折叠任务卡和只读会话记录。",
+    "description": "对话、模型选择和折叠任务卡。",
     "detail": "README.zh_CN.md"
   },
   "messages": {
@@ -29,10 +29,6 @@
     "running": "进行中",
     "completed": "已完成",
     "failed": "失败",
-    "input": "输入",
-    "assistant": "助手",
-    "tool": "工具",
-    "system": "系统",
     "prismMessage": "棱镜的消息",
     "yourMessage": "你的消息",
     "you": "你",
@@ -41,12 +37,6 @@
     "noResponse": "模型尚未发送答复。请在输入框发送「请汇总已有任务的结果，无需重新执行」。",
     "task": "后台任务",
     "step": "执行步骤",
-    "viewSession": "查看只读会话",
-    "session": "只读会话",
-    "refresh": "刷新记录",
-    "close": "关闭",
-    "loading": "正在读取会话…",
-    "noHistory": "这项任务还没有会话记录。",
     "offline": "连接失败，请重试。",
     "requestFailed": "请求失败（{status}）。",
     "json": "请使用 JSON 提交请求。",

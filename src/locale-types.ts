@@ -23,10 +23,6 @@ export interface WebCopy {
   running: string
   completed: string
   failed: string
-  input: string
-  assistant: string
-  tool: string
-  system: string
   prismMessage: string
   yourMessage: string
   you: string
@@ -35,12 +31,6 @@ export interface WebCopy {
   noResponse: string
   task: string
   step: string
-  viewSession: string
-  session: string
-  refresh: string
-  close: string
-  loading: string
-  noHistory: string
   offline: string
   requestFailed: string
   json: string

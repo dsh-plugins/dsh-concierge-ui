@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Prism chat",
-    "description": "Chat, model selection, task cards and read-only session history.",
+    "description": "Chat, model selection and task cards.",
     "detail": "README.md"
   },
   "messages": {
@@ -29,10 +29,6 @@
     "running": "Running",
     "completed": "Completed",
     "failed": "Failed",
-    "input": "Input",
-    "assistant": "Assistant",
-    "tool": "Tool",
-    "system": "System",
     "prismMessage": "Message from Prism",
     "yourMessage": "Your message",
     "you": "You",
@@ -41,12 +37,6 @@
     "noResponse": "The model did not send a reply. In the message box, ask “Summarize the existing task results without running the tasks again.”",
     "task": "Background task",
     "step": "Execution step",
-    "viewSession": "View read-only session",
-    "session": "Read-only session",
-    "refresh": "Refresh history",
-    "close": "Close",
-    "loading": "Loading session…",
-    "noHistory": "This task has no session history yet.",
     "offline": "Connection failed. Please try again.",
     "requestFailed": "Request failed ({status}).",
     "json": "Submit the request as JSON.",

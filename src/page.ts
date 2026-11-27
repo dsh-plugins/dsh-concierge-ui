@@ -151,7 +151,6 @@ textarea:focus-visible {
   font-weight: 550;
 }
 #composer .model-toggle:hover,
-.text-button:hover,
 .icon-button:hover {
   background: var(--pale);
 }
@@ -352,8 +351,7 @@ kbd {
   justify-items: end;
 }
 .speaker,
-.time,
-.eyebrow {
+.time {
   font-size: 11px;
   color: var(--muted);
 }
@@ -366,8 +364,7 @@ kbd {
   width: 15px;
   height: 16px;
 }
-.message p,
-.trace-entry p {
+.message p {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.8;
@@ -453,39 +450,8 @@ kbd {
   border-top: 1px solid var(--line);
   padding: 12px 15px;
 }
-.task-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
 .prism-task-surface.arco-card { border: 0; border-radius: 14px; overflow: hidden; }
 .task-body .prism-task-surface { margin-top: 10px; }
-.prism-trace-modal.arco-modal {
-  width: min(650px, calc(100vw - 32px));
-  max-height: min(760px, 88dvh);
-  border-radius: 16px;
-  display: inline-flex;
-  flex-direction: column;
-  text-align: left;
-}
-.prism-trace-modal .arco-modal-header { height: auto; padding: 14px 20px; justify-content: flex-start; }
-.prism-trace-heading { text-align: left; }
-.prism-trace-heading h2 { margin: 3px 0; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
-.prism-trace-modal .arco-modal-content { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px; }
-.prism-trace-modal .arco-modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; }
-.trace-content { min-height: 72px; }
-.trace-entry + .trace-entry {
-  margin-top: 16px;
-}
-.trace-entry p {
-  font-size: 13px;
-  margin-top: 3px;
-}
-.trace-content > .notice {
-  font-size: 13px;
-  color: var(--muted);
-}
 @media (max-width: 560px) {
   .topbar {
     height: 60px;

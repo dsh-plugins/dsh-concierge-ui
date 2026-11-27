@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Conversation Prism",
-    "description": "Conversation, sélection du modèle, fiches de tâches et historique en lecture seule."
+    "description": "Conversation, sélection du modèle et fiches de tâches."
   },
   "messages": {
     "title": "Prism · Conversation",
@@ -28,10 +28,6 @@
     "running": "En cours",
     "completed": "Terminée",
     "failed": "Échec",
-    "input": "Entrée",
-    "assistant": "Assistant",
-    "tool": "Outil",
-    "system": "Système",
     "prismMessage": "Message de Prism",
     "yourMessage": "Votre message",
     "you": "Vous",
@@ -40,12 +36,6 @@
     "noResponse": "Le modèle n’a pas envoyé de réponse. Dans le champ de message, écrivez « Résume les résultats des tâches existantes sans les relancer. »",
     "task": "Tâche en arrière-plan",
     "step": "Étape d’exécution",
-    "viewSession": "Voir la session en lecture seule",
-    "session": "Session en lecture seule",
-    "refresh": "Actualiser l’historique",
-    "close": "Fermer",
-    "loading": "Chargement de la session…",
-    "noHistory": "Cette tâche n’a pas encore d’historique.",
     "offline": "Échec de la connexion. Veuillez réessayer.",
     "requestFailed": "Échec de la requête ({status}).",
     "json": "Envoyez la requête au format JSON.",

@@ -4,7 +4,7 @@
 
 # dsh-concierge-ui
 
-**Use Prism in a browser to send a message, follow delegated work and open its read-only session.**
+**Use Prism in a browser to send messages and follow delegated work.**
 
 English | [简体中文](README.zh_CN.md)
 
@@ -14,7 +14,7 @@ English | [简体中文](README.zh_CN.md)
 
 Open **Plugins → Add plugin** and install and enable the five `@dsh-prism` packages in the order shown in the guide. To install this package, enter `@dsh-prism/dsh-concierge-ui@0.1.1`. [Illustrated installation guide](https://prism.dsh-plug.in/guide/start)
 
-Add your model provider in **Settings → Models** and select the model in a workspace. Under **Settings → Prism**, add project folders and choose which tools their agents may use. Open Prism to send a request across projects. Expand a task card to follow progress or inspect its executor’s read-only session. [Two-project walkthrough](https://prism.dsh-plug.in/guide/start)
+Add your model provider in **Settings → Models** and select the model in a workspace. Under **Settings → Prism**, add project folders and choose which tools their agents may use. Open Prism to send a request across projects. Expand a task card to follow progress. [Two-project walkthrough](https://prism.dsh-plug.in/guide/start)
 
 ## Run the standalone host from source
 
@@ -36,6 +36,6 @@ Open the login link printed by your Prism host. DSH authenticates the browser an
 
 ## Choose a model and check progress
 
-Open the model selector immediately to the left of Send. Read the capability descriptions and select the L1 model for subsequent messages. A delegated request creates a collapsed task card in the conversation. Expand it for the status and execution steps, or choose the read-only session action to inspect what happened. Reloading the page restores the conversation. The interface follows your browser’s preferred supported language.
+Open the model selector immediately to the left of Send. Read the capability descriptions and select the L1 model for subsequent messages. A delegated request creates a collapsed task card in the conversation. Expand the card to see its status and execution steps. When using Prism in the DSH web app, return to DSH to inspect detailed session history. Reloading the page restores the conversation. The interface follows your browser’s preferred supported language.
 
 [Prism documentation](https://prism.dsh-plug.in/) · [Technical reference](docs/TECH.md)

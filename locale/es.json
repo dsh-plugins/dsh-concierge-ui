@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Chat de Prism",
-    "description": "Chat, selección de modelos, tarjetas de tareas e historial de solo lectura."
+    "description": "Chat, selección de modelos y tarjetas de tareas."
   },
   "messages": {
     "title": "Prism · Chat",
@@ -28,10 +28,6 @@
     "running": "En curso",
     "completed": "Completada",
     "failed": "Fallida",
-    "input": "Entrada",
-    "assistant": "Asistente",
-    "tool": "Herramienta",
-    "system": "Sistema",
     "prismMessage": "Mensaje de Prism",
     "yourMessage": "Tu mensaje",
     "you": "Tú",
@@ -40,12 +36,6 @@
     "noResponse": "El modelo no ha enviado una respuesta. Escribe en el cuadro de mensaje «Resume los resultados de las tareas existentes sin volver a ejecutarlas».",
     "task": "Tarea en segundo plano",
     "step": "Paso de ejecución",
-    "viewSession": "Ver sesión de solo lectura",
-    "session": "Sesión de solo lectura",
-    "refresh": "Actualizar historial",
-    "close": "Cerrar",
-    "loading": "Cargando sesión…",
-    "noHistory": "Esta tarea aún no tiene historial.",
     "offline": "Falló la conexión. Inténtalo de nuevo.",
     "requestFailed": "Error en la solicitud ({status}).",
     "json": "Envía la solicitud como JSON.",
