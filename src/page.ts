@@ -88,7 +88,8 @@ textarea:focus-visible {
   justify-content: space-between;
   padding: 0 clamp(18px, 4vw, 60px);
   background: #fcfdfa;
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 3;
 }
 .brand {
