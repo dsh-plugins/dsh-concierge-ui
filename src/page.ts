@@ -315,7 +315,7 @@ kbd {
 #send:hover:not(:disabled) {
   background: #0c4632;
 }
-#send > svg { display: block; }
+#send svg { display: block; }
 #send:disabled {
   background: #e5ece5;
   color: #819688;
