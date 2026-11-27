@@ -19,6 +19,10 @@ function requestId() {
   ).join('')
 }
 
+function modelLabel(model: ConversationView['models'][number]): string {
+  return 'label' in model && typeof model.label === 'string' ? model.label : model.id
+}
+
 export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: ComposerProps) {
   const [draft, setDraft] = useState('')
   const [open, setOpen] = useState(false)
@@ -28,6 +32,8 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
   const pending = useRef<{ text: string; id: string } | null>(null)
   const inFlight = useRef(false)
   const unavailable = !view?.models.length || busy
+  const selectedModel = view?.models.find(model => model.id === view.modelId)
+  const selectedLabel = selectedModel ? modelLabel(selectedModel) : view?.modelId
 
   useEffect(() => {
     if (unavailable) setOpen(false)
@@ -133,7 +139,7 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
             }}
           >
             <span className="model-option">
-              <strong>{model.id}</strong>
+              <strong>{modelLabel(model)}</strong>
               <small>{model.description}</small>
             </span>
             {model.id === view.modelId && <Icon name="Check" aria-hidden="true" size={15} />}
@@ -202,7 +208,7 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
                   aria-haspopup="listbox"
                   aria-expanded={open}
                   aria-controls={open ? 'models' : undefined}
-                  aria-label={copy.currentModel.replace('{model}', () => view?.modelId ?? copy.notLoaded)}
+                  aria-label={copy.currentModel.replace('{model}', () => selectedLabel ?? copy.notLoaded)}
                   onKeyDown={(event) => {
                     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                       event.preventDefault()
@@ -211,7 +217,7 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
                   }}
                 >
                   <Icon name="Diamond" size={14} aria-hidden="true" />
-                  <span id="model-name">{view?.modelId ?? copy.chooseModel}</span>
+                  <span id="model-name">{selectedLabel ?? copy.chooseModel}</span>
                   <Icon name={open ? 'ChevronDown' : 'ChevronUp'} size={13} aria-hidden="true" />
                 </Button>
               </Popover>

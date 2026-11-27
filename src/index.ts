@@ -104,7 +104,11 @@ function requiredString(value: unknown, limit: number): string {
 function project(view: ConversationView, copy: WebCopy): ConversationView {
   return {
     modelId: view.modelId,
-    models: view.models.map(({ id, description }) => ({ id, description })),
+    models: view.models.map(model => ({
+      id: model.id,
+      description: model.description,
+      ...('label' in model && typeof model.label === 'string' && {label: model.label}),
+    })),
     messages: view.messages.map(message => ({
       id: message.id,
       role: message.role,
