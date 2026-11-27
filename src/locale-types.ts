@@ -13,6 +13,14 @@ export interface WebCopy {
   models: string
   sendMessage: string
   attachMedia: string
+  attachments: string
+  uploadingAttachment: string
+  retryAttachment: string
+  unsupportedAttachment: string
+  emptyAttachment: string
+  largeAttachment: string
+  tooManyAttachments: string
+  attachmentUploadFailed: string
   removeMedia: string
   message: string
   placeholder: string

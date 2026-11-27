@@ -24,10 +24,15 @@ export function post(path: '/message' | '/model', body: unknown): Promise<Conver
   })
 }
 
-export function upload(file: File): Promise<MediaAsset> {
-  return request('/attachment?' + new URLSearchParams({name: file.name}), {
+export async function upload(file: File, signal: AbortSignal): Promise<MediaAsset> {
+  const uploaded = await request<MediaAsset>('/attachment?' + new URLSearchParams({name: file.name}), {
     method: 'POST',
     headers: {'Content-Type': file.type, 'X-Prism-Request': '1'},
     body: file,
+    signal,
   })
+  if (typeof uploaded?.assetId !== 'string' || !uploaded.assetId) {
+    throw new Error(copy.attachmentUploadFailed)
+  }
+  return uploaded
 }

@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL('../', import.meta.url))
 await build({
   absWorkingDir: root,
   stdin: {
-    contents: "import './src/arco-theme.css'; import './src/browser.tsx'",
+    contents: "import './src/arco-theme.css'; import './src/composer-attachments.css'; import './src/browser.tsx'",
     resolveDir: root,
     sourcefile: 'prism-client.ts',
   },

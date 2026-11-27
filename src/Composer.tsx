@@ -1,14 +1,18 @@
 import { copy } from './client-locale.js'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Button, Icon, Popover, Textarea, type TextareaRef } from '@dsh-plugin/dsh-ui-components'
-import type { ConversationView } from './conversation.js'
+import type { ConversationView, MediaAsset } from './conversation.js'
+import { AttachmentCard, type Attachment } from './AttachmentCard.js'
+import { attachmentAccept, attachmentIssue, attachmentLimit } from './attachments.js'
 
 export interface ComposerProps {
   view?: ConversationView
   busy: boolean
+  sending: boolean
   feedback?: string
   onEdit?(): void
-  onSend(text: string, requestId: string, files: readonly File[]): Promise<void>
+  onUpload(file: File, signal: AbortSignal): Promise<MediaAsset>
+  onSend(text: string, requestId: string, attachmentIds: readonly string[]): Promise<void>
   onSelect(id: string): Promise<void>
 }
 
@@ -23,18 +27,34 @@ function modelLabel(model: ConversationView['models'][number]): string {
   return 'label' in model && typeof model.label === 'string' ? model.label : model.id
 }
 
-export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: ComposerProps) {
+export function Composer({ view, busy, sending, feedback, onUpload, onSend, onSelect, onEdit }: ComposerProps) {
   const [draft, setDraft] = useState('')
-  const [files, setFiles] = useState<File[]>([])
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [pickerFeedback, setPickerFeedback] = useState('')
   const [open, setOpen] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
   const menu = useRef<HTMLDivElement>(null)
   const input = useRef<TextareaRef>(null)
-  const pending = useRef<{text: string; id: string; files: readonly File[]} | null>(null)
+  const picker = useRef<HTMLInputElement>(null)
+  const uploads = useRef(new Map<string, AbortController>())
+  const pending = useRef<{value: string; id: string} | null>(null)
   const inFlight = useRef(false)
   const unavailable = !view?.models.length || busy
+  const canUpload = view?.mediaEnabled === true && !busy
+  const canSend = Boolean(view && !busy && (draft.trim() || attachments.length) &&
+    (attachments.length === 0 || view.mediaEnabled && attachments.every(attachment => attachment.status === 'ready')))
   const selectedModel = view?.models.find(model => model.id === view.modelId)
   const selectedLabel = selectedModel ? modelLabel(selectedModel) : view?.modelId
+
+  useEffect(() => {
+    const pendingUploads = uploads.current
+    return () => {
+      for (const controller of pendingUploads.values()) {
+        controller.abort()
+      }
+      pendingUploads.clear()
+    }
+  }, [])
 
   useEffect(() => {
     if (unavailable) setOpen(false)
@@ -108,22 +128,73 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
   }
   async function submit() {
     const text = draft.trim()
-    if ((!text && !files.length) || !view || busy || inFlight.current) { return }
-    if (pending.current?.text !== text || pending.current.files !== files) {
-      pending.current = {text, id: requestId(), files}
+    if (!canSend || inFlight.current) { return }
+    const ids = attachments.flatMap(attachment => attachment.status === 'ready' ? [attachment.assetId] : [])
+    const value = JSON.stringify([text, ids])
+    if (pending.current?.value !== value) {
+      pending.current = {value, id: requestId()}
     }
     inFlight.current = true
     try {
-      await onSend(text, pending.current.id, files)
+      await onSend(text, pending.current.id, ids)
       pending.current = null
       setDraft((current) => (current.trim() === text ? '' : current))
-      setFiles([])
+      setAttachments(current => current.filter(attachment => !attachments.includes(attachment)))
+      setPickerFeedback('')
       input.current?.focus()
     } catch {
       /* Keep the draft and id for retries after an uncertain acknowledgement. */
     } finally {
       inFlight.current = false
     }
+  }
+
+  async function stage({ id, file }: Attachment) {
+    const controller = new AbortController()
+    uploads.current.set(id, controller)
+    const update = (attachment: Attachment) => {
+      if (uploads.current.get(id) === controller) {
+        setAttachments(current => current.map(entry => entry.id === id ? attachment : entry))
+      }
+    }
+    update({ id, file, status: 'uploading' })
+    try {
+      const asset = await onUpload(file, controller.signal)
+      update({ id, file, status: 'ready', assetId: asset.assetId })
+    } catch (error) {
+      const message = error instanceof Error && !(error instanceof TypeError) ? error.message : copy.attachmentUploadFailed
+      update({ id, file, status: 'failed', error: message, retryable: true })
+    } finally {
+      if (uploads.current.get(id) === controller) {
+        uploads.current.delete(id)
+      }
+    }
+  }
+
+  function pick(files: readonly File[]) {
+    if (!canUpload || inFlight.current || !files.length) return
+    const space = attachmentLimit - attachments.length
+    setPickerFeedback(files.length > space ? copy.tooManyAttachments : '')
+    const issues = { format: copy.unsupportedAttachment, empty: copy.emptyAttachment, size: copy.largeAttachment }
+    const next = files.slice(0, space).map((file): Attachment => {
+      const issue = attachmentIssue(file)
+      const id = requestId()
+      return issue ? { id, file, status: 'failed', retryable: false, error: issues[issue] } : { id, file, status: 'uploading' }
+    })
+    setAttachments(current => [...current, ...next])
+    for (const attachment of next) {
+      if (attachment.status === 'uploading') void stage(attachment)
+    }
+    onEdit?.()
+  }
+
+  function remove(id: string) {
+    const controller = uploads.current.get(id)
+    uploads.current.delete(id)
+    controller?.abort()
+    setAttachments(current => current.filter(attachment => attachment.id !== id))
+    setPickerFeedback('')
+    onEdit?.()
   }
 
   const choices = (
@@ -163,6 +234,15 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
             void submit()
           }}
         >
+          {attachments.length > 0 && (
+            <ul className="prism-compose-files" aria-label={copy.attachments}>
+              {attachments.map(attachment => (
+                <AttachmentCard key={attachment.id} attachment={attachment} sending={sending} canRetry={canUpload}
+                  onRetry={() => { if (!uploads.current.has(attachment.id)) void stage(attachment) }}
+                  onRemove={() => remove(attachment.id)} />
+              ))}
+            </ul>
+          )}
           <label className="sr-only" htmlFor="draft">
             {copy.message}
           </label>
@@ -189,26 +269,20 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
               void submit()
             }}
           />
-          {view?.mediaEnabled && (
-            <div className="attach-files">
-              <label>
-                <span>{copy.attachMedia}</span>
-                <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
-                  disabled={busy} onChange={event => {
-                    const selected = Array.from(event.currentTarget.files ?? [])
-                    setFiles(current => [...current, ...selected].slice(0, 8))
-                    event.currentTarget.value = ''
-                    onEdit?.()
-                  }} />
-              </label>
-              {files.map((file, index) => <Button key={file.name + index} size="sm" variant="text" disabled={busy}
-                title={copy.removeMedia} aria-label={copy.removeMedia + ' ' + file.name}
-                onClick={() => setFiles(current => current.filter((_, position) => index !== position))}>
-                {file.name} <span aria-hidden="true">×</span>
-              </Button>)}
-            </div>
-          )}
           <div className="composer-foot">
+            {view?.mediaEnabled && (
+              <>
+                <input id="attachment-picker" ref={picker} type="file" hidden multiple accept={attachmentAccept}
+                  disabled={!canUpload || attachments.length >= attachmentLimit} onChange={event => {
+                    const selected = Array.from(event.currentTarget.files ?? [])
+                    event.currentTarget.value = ''
+                    pick(selected)
+                  }} />
+                <button type="button" className="prism-attach-button" aria-label={copy.attachMedia}
+                  title={attachments.length >= attachmentLimit ? copy.tooManyAttachments : copy.attachMedia}
+                  disabled={!canUpload || attachments.length >= attachmentLimit} onClick={() => picker.current?.click()} />
+              </>
+            )}
             <span className="key-hint">
               <kbd>Enter</kbd> {copy.send} <span>·</span> <kbd>Shift + Enter</kbd> {copy.newline}
             </span>
@@ -250,14 +324,14 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
               aria-label={copy.sendMessage}
               title={copy.sendMessage}
               type="submit"
-              disabled={!view || busy || (!draft.trim() && !files.length)}
+              disabled={!canSend}
             >
               <Icon name="Send" size={17} aria-hidden="true" />
             </button>
           </div>
         </form>
         <div id="feedback" role="status" aria-live="polite">
-          {feedback}
+          {feedback || pickerFeedback}
         </div>
       </div>
     </section>

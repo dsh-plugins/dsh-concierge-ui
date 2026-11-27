@@ -88,20 +88,13 @@ function Concierge() {
     }
   }, [])
 
-  async function submit(kind: Operation, body: object, files: readonly File[] = []): Promise<void> {
+  async function submit(kind: Operation, body: object): Promise<void> {
     if (writing.current || connection !== 'online') throw new Error(copy.later)
     writing.current = true
     setOperation(kind)
     setError('')
     const acceptedAt = revision.current
     try {
-      if (files.length) {
-        const attachments: string[] = []
-        for (const file of files) {
-          attachments.push((await upload(file)).assetId)
-        }
-        body = {...body, attachments}
-      }
       const next = await post(kind === 'send' ? '/message' : '/model', body)
       // The stream can already contain later task transitions or a new model selection.
       if (revision.current === acceptedAt) setView(next)
@@ -142,9 +135,13 @@ function Concierge() {
         <Composer
           view={view}
           busy={connection !== 'online' || operation !== undefined}
+          sending={operation === 'send'}
           feedback={feedback}
           onEdit={() => setError('')}
-          onSend={(text, requestId, files) => submit('send', {text, requestId}, files)}
+          onUpload={upload}
+          onSend={(text, requestId, attachments) => submit('send', {
+            text, requestId, ...(attachments.length > 0 && { attachments }),
+          })}
           onSelect={(modelId) => modelId === view?.modelId ? Promise.resolve() : submit('select', { modelId })}
         />
       </main>
