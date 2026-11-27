@@ -6,6 +6,7 @@ import type { ConversationView } from '@dsh-prism/dsh-orchestrator/contracts'
 import { Composer } from './Composer.js'
 import { Timeline } from './Timeline.js'
 import { api, describe, post } from './client-api.js'
+import { dshHome, prismOpenedKey } from './navigation.js'
 
 type Connection = 'connecting' | 'online' | 'reconnecting'
 type Operation = 'send' | 'select'
@@ -26,6 +27,7 @@ function Concierge() {
   useEffect(() => {
     let events: EventSource | undefined
     let timer: ReturnType<typeof setTimeout> | undefined
+    let rememberOpening = integrated
 
     const disconnect = () => {
       clearTimeout(timer)
@@ -39,10 +41,19 @@ function Concierge() {
       events = source
       source.onmessage = (event) => {
         if (source !== events) return
+        const next = JSON.parse(event.data) as ConversationView
         revision.current++
-        setView(JSON.parse(event.data) as ConversationView)
+        setView(next)
         setConnection('online')
         setNeedsProject(false)
+        if (rememberOpening && next.models.length > 0) {
+          rememberOpening = false
+          try {
+            localStorage.setItem(prismOpenedKey, '1')
+          } catch (error) {
+            console.debug('Prism could not remember this browser’s first visit', error)
+          }
+        }
       }
       source.addEventListener('no-project', () => {
         if (source === events) setNeedsProject(true)
@@ -103,8 +114,8 @@ function Concierge() {
     <DshProvider>
       <header className="topbar">
         <div className="brand"><PrismMark /><span>{copy.brand}</span>{copy.brand !== 'Prism' && <span className="brand-en" lang="en">Prism</span>}</div>
-        {document.getElementById('root')?.dataset.integrated === 'true' && <Button variant="outline" size="sm"
-          onClick={() => window.location.assign('/')}>DeepSeek Harness</Button>}
+        {integrated && <Button variant="outline" size="sm"
+          onClick={() => window.location.assign(dshHome)}>DeepSeek Harness</Button>}
       </header>
       <main id="main" className={empty ? 'empty' : undefined}>
         {empty ? (
@@ -132,4 +143,5 @@ function Concierge() {
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root mount point')
+const integrated = root.dataset.integrated === 'true'
 createRoot(root).render(<Concierge />)

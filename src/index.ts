@@ -6,9 +6,10 @@ import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import type { WebAuthRequest, WebAdmission, WebRoute } from '@deepseek-ai/dsh-host-webserver'
-import type { ConversationView, TraceEntry } from '@dsh-prism/dsh-orchestrator/core'
+import type { ConversationView, RegistryPort, TraceEntry } from '@dsh-prism/dsh-orchestrator/core'
 import { documentHtml, stylesheet } from './page.js'
 import { missingReply } from './delivery.js'
+import { openPrismOnLoad } from './navigation.js'
 
 export const name = 'dsh-concierge-ui'
 export const inject = ['webServer']
@@ -301,6 +302,13 @@ export async function apply(ctx: Context, config: Config = {}) {
       { prepend: true },
     )
     ctx.on('webserver/authorize', restrictPublicSurface, { prepend: true })
+  } else {
+    ctx.on('webserver/index-inject', (rows, peer) => {
+      const registry = ctx.get('prismRegistry') as Pick<RegistryPort, 'query'> | undefined
+      if (peer.principal.kind === 'owner' && registry?.query('web:owner').length && ctx.get('prism')) {
+        rows.push({ kind: 'script', placement: 'head', text: openPrismOnLoad })
+      }
+    })
   }
   const [js, css] = await Promise.all([
     readFile(new URL('./client/prism.js', import.meta.url), 'utf8'),
