@@ -6,19 +6,24 @@ import type { ConfigForms, SettingsSectionIconOwnerProps } from '@deepseek-ai/ds
 import { settingsCopy } from './settings-copy.js'
 import { ImSettings } from './ImSettings.js'
 import { imCopy } from './im-copy.js'
+import { MeshSettings } from './MeshSettings.js'
+import { meshCopy } from './mesh-copy.js'
 import { PrismShortcut } from './PrismShortcut.js'
 import { ModelSettings, modelSettingsNamespace, type ModelDirectoryRemote, type ModelSelections } from './ModelSettings.js'
 
 const configSection = 'prism-projects'
 const imSection = 'prism-im'
+const meshSection = 'prism-mesh'
 
-function SettingsIcon({ size, section }: { size: number; section: 'config' | 'im' }) {
+function SettingsIcon({ size, section }: { size: number; section: 'config' | 'im' | 'mesh' }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25"
     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {section === 'config' ?
       <path d="M2 4h4m3 0h5M2 8h8m3 0h1M2 12h2m3 0h7M6 2.5v3m4 1v3m-6 1v3" /> :
-      <><path d="M13.5 7.5a4.5 4.5 0 0 1-4.5 4.5H6l-3.5 2v-4a4.5 4.5 0 0 1-1-2.5A4.5 4.5 0 0 1 6 3h3a4.5 4.5 0 0 1 4.5 4.5Z" />
-        <path d="M5 7.5h5" /></>}
+      section === 'im' ?
+        <><path d="M13.5 7.5a4.5 4.5 0 0 1-4.5 4.5H6l-3.5 2v-4a4.5 4.5 0 0 1-1-2.5A4.5 4.5 0 0 1 6 3h3a4.5 4.5 0 0 1 4.5 4.5Z" />
+          <path d="M5 7.5h5" /></> :
+        <path d="M6.5 9.5l3-3m-4.2 6.8-1 .9a2.5 2.5 0 0 1-3.5-3.5l2.7-2.7a2.5 2.5 0 0 1 3.5 0m3.7-5.3 1-.9a2.5 2.5 0 0 1 3.5 3.5l-2.7 2.7a2.5 2.5 0 0 1-3.5 0" />}
   </svg>
 }
 
@@ -49,6 +54,9 @@ export function apply(ctx: BrowserContext) {
   function PrismIm() {
     return <ImSettings copy={imCopy(useLanguage())} />
   }
+  function PrismMesh() {
+    return <MeshSettings language={useLanguage()} />
+  }
   function PrismButton({ wide }: SidebarFooterActionOwnerProps) {
     const copy = settingsCopy(useLanguage())
     return <PrismShortcut wide={wide} label={copy.title} title={copy.open} />
@@ -63,12 +71,22 @@ export function apply(ctx: BrowserContext) {
     name: 'settings.section', id: imSection, order: 61,
     label: () => `${settingsCopy(ctx.locale.getSnapshot().active).title}/IM`,
   }, PrismIm))
+  ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section', id: meshSection, order: 63,
+    label: () => {
+      const language = ctx.locale.getSnapshot().active
+      return `${settingsCopy(language).title}/${meshCopy(language).section}`
+    },
+  }, PrismMesh))
   ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
     name: 'settings.section.icon', id: configSection,
   }, ({ size }: SettingsSectionIconOwnerProps) => <SettingsIcon size={size} section="config" />))
   ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
     name: 'settings.section.icon', id: imSection,
   }, ({ size }: SettingsSectionIconOwnerProps) => <SettingsIcon size={size} section="im" />))
+  ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
+    name: 'settings.section.icon', id: meshSection,
+  }, ({ size }: SettingsSectionIconOwnerProps) => <SettingsIcon size={size} section="mesh" />))
   ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
     name: 'sidebar.footer.action', id: 'prism-chat', order: 60,
   }, PrismButton))
