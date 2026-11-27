@@ -26,7 +26,7 @@ test('public web gate allows concierge and exact authenticated callback routes',
   const decide = (path, method = 'GET', transport = 'http') =>
     restrictPublicSurface({ url: new URL(path, 'http://test.invalid'), headers: {}, method, transport })
   for (const path of ['/', '/prism/browser.js', '/prism/api/events']) assert.equal(decide(path), undefined)
-  for (const path of ['/prism/mesh/v1', '/prism/im/onebot', '/prism/im/qq']) {
+  for (const path of ['/prism/im/onebot', '/prism/im/qq']) {
     assert.equal(decide(path, 'POST'), undefined)
     assert.equal(decide(path, 'GET').status, 403)
     assert.equal(decide(path + '/', 'POST').status, 403)
@@ -44,6 +44,7 @@ test('public web gate allows concierge and exact authenticated callback routes',
   ])
     assert.equal(decide(path).status, 403)
   assert.equal(decide('/prism/api/view', 'GET', 'upgrade').status, 403)
+  assert.equal(decide('/prism/mesh/v1', 'POST').status, 403)
 })
 
 test('channel endpoints restrict identity, writable methods and output fields', async (t) => {

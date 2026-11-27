@@ -29,7 +29,7 @@ interface ConversationService {
 
 const pages = new Set(['/index.html', '/prism', '/prism/'])
 const api = '/prism/api'
-const signedCallbacks = new Set(['/prism/mesh/v1', '/prism/im/onebot', '/prism/im/qq'])
+const signedCallbacks = new Set(['/prism/im/onebot', '/prism/im/qq'])
 const publicPaths = new Set([
   ...pages,
   '/prism/browser.js',
