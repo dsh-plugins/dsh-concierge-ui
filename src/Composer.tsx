@@ -1,6 +1,6 @@
 import { copy } from './client-locale.js'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Button, Icon, IconButton, Popover, Textarea, type TextareaRef } from '@dsh-plugin/dsh-ui-components'
+import { Button, Icon, Popover, Textarea, type TextareaRef } from '@dsh-plugin/dsh-ui-components'
 import type { ConversationView } from '@dsh-prism/dsh-orchestrator/contracts'
 
 export interface ComposerProps {
@@ -222,15 +222,15 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
                 </Button>
               </Popover>
             </div>
-            <IconButton
+            <button
               id="send"
-              label={copy.sendMessage}
-              htmlType="submit"
-              variant="primary"
-              shape="circle"
-              icon={<Icon name="Send" size={17} aria-hidden="true" />}
+              aria-label={copy.sendMessage}
+              title={copy.sendMessage}
+              type="submit"
               disabled={!view || busy || !draft.trim()}
-            />
+            >
+              <Icon name="Send" size={17} aria-hidden="true" />
+            </button>
           </div>
         </form>
         <div id="feedback" role="status" aria-live="polite">

@@ -276,7 +276,7 @@ h1 {
   max-height: 160px;
   font-size: 15px;
   line-height: 1.65;
-  padding: 0 2px;
+  padding: 7px 10px;
 }
 #draft::placeholder {
   color: var(--muted);
@@ -315,6 +315,7 @@ kbd {
 #send:hover:not(:disabled) {
   background: #0c4632;
 }
+#send > svg { display: block; }
 #send:disabled {
   background: #e5ece5;
   color: #819688;
