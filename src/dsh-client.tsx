@@ -6,7 +6,6 @@ import type { ConfigForms, SettingsSectionIconOwnerProps } from '@deepseek-ai/ds
 import { settingsCopy } from './settings-copy.js'
 import { ImSettings } from './ImSettings.js'
 import { imCopy } from './im-copy.js'
-import { ui } from './im-style.js'
 import { PrismShortcut } from './PrismShortcut.js'
 import { ModelSettings, modelSettingsNamespace, type ModelDirectoryRemote, type ModelSelections } from './ModelSettings.js'
 
@@ -44,7 +43,6 @@ export function apply(ctx: BrowserContext) {
       <h2 style={{ margin: 0 }}>{copy.title}</h2>
       <p style={{ margin: 0 }}>{copy.workspaceHelp}</p>
       <p style={{ margin: 0 }}>{copy.modelHelp}</p>
-      <div><button type="button" style={ui.button} onClick={() => window.location.assign('/prism')}>{copy.open}</button></div>
       <ModelSettings form={modelForm} remote={ctx.remote} language={language} />
     </section>
   }
