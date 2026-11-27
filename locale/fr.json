@@ -17,6 +17,8 @@
     "switching": "Changement de modèle…",
     "models": "Modèle de conversation",
     "sendMessage": "Envoyer le message",
+    "attachMedia": "Joindre une image ou une vidéo",
+    "removeMedia": "Retirer la pièce jointe",
     "message": "Message",
     "placeholder": "Écrivez à Prism…",
     "send": "Envoyer",

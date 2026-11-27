@@ -17,6 +17,8 @@
     "switching": "Modell wird gewechselt…",
     "models": "Chatmodell",
     "sendMessage": "Nachricht senden",
+    "attachMedia": "Bild oder Video anhängen",
+    "removeMedia": "Anhang entfernen",
     "message": "Nachricht",
     "placeholder": "Nachricht an Prism…",
     "send": "Senden",

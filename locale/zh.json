@@ -18,6 +18,8 @@
     "switching": "正在切换模型…",
     "models": "对话模型",
     "sendMessage": "发送消息",
+    "attachMedia": "添加图片或视频",
+    "removeMedia": "移除附件",
     "message": "消息",
     "placeholder": "给棱镜发消息…",
     "send": "发送",

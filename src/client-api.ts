@@ -1,5 +1,5 @@
 import { copy } from './client-locale.js'
-import type { ConversationView } from '@dsh-prism/dsh-orchestrator/contracts'
+import type { ConversationView, MediaAsset } from './conversation.js'
 
 export const api = '/prism/api'
 
@@ -21,5 +21,13 @@ export function post(path: '/message' | '/model', body: unknown): Promise<Conver
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Prism-Request': '1' },
     body: JSON.stringify(body),
+  })
+}
+
+export function upload(file: File): Promise<MediaAsset> {
+  return request('/attachment?' + new URLSearchParams({name: file.name}), {
+    method: 'POST',
+    headers: {'Content-Type': file.type, 'X-Prism-Request': '1'},
+    body: file,
   })
 }

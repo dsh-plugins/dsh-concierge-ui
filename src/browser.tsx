@@ -2,10 +2,10 @@ import { copy } from './client-locale.js'
 import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Button, DshProvider } from '@dsh-plugin/dsh-ui-components'
-import type { ConversationView } from '@dsh-prism/dsh-orchestrator/contracts'
+import type { ConversationView } from './conversation.js'
 import { Composer } from './Composer.js'
 import { Timeline } from './Timeline.js'
-import { api, describe, post } from './client-api.js'
+import { api, describe, post, upload } from './client-api.js'
 import { dshHome, prismOpenedKey } from './navigation.js'
 
 type Connection = 'connecting' | 'online' | 'reconnecting'
@@ -84,13 +84,20 @@ function Concierge() {
     }
   }, [])
 
-  async function submit(kind: Operation, body: object): Promise<void> {
+  async function submit(kind: Operation, body: object, files: readonly File[] = []): Promise<void> {
     if (writing.current || connection !== 'online') throw new Error(copy.later)
     writing.current = true
     setOperation(kind)
     setError('')
     const acceptedAt = revision.current
     try {
+      if (files.length) {
+        const attachments: string[] = []
+        for (const file of files) {
+          attachments.push((await upload(file)).assetId)
+        }
+        body = {...body, attachments}
+      }
       const next = await post(kind === 'send' ? '/message' : '/model', body)
       // The stream can already contain later task transitions or a new model selection.
       if (revision.current === acceptedAt) setView(next)
@@ -133,7 +140,7 @@ function Concierge() {
           busy={connection !== 'online' || operation !== undefined}
           feedback={feedback}
           onEdit={() => setError('')}
-          onSend={(text, requestId) => submit('send', { text, requestId })}
+          onSend={(text, requestId, files) => submit('send', {text, requestId}, files)}
           onSelect={(modelId) => modelId === view?.modelId ? Promise.resolve() : submit('select', { modelId })}
         />
       </main>

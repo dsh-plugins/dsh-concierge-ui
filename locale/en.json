@@ -18,6 +18,8 @@
     "switching": "Switching models…",
     "models": "Chat model",
     "sendMessage": "Send message",
+    "attachMedia": "Attach image or video",
+    "removeMedia": "Remove attachment",
     "message": "Message",
     "placeholder": "Message Prism…",
     "send": "Send",

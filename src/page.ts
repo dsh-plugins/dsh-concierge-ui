@@ -331,6 +331,28 @@ kbd {
   margin: 5px 0 0;
   overflow-wrap: anywhere;
 }
+.attach-files {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0;
+}
+.attach-files label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.attach-files input {
+  inline-size: min(220px, 100%);
+}
+.message-media {
+  display: block;
+  max-inline-size: 100%;
+  max-block-size: 360px;
+  border-radius: 10px;
+  margin-top: 8px;
+}
 #thread {
   flex: 1;
   padding: 32px 22px 0;

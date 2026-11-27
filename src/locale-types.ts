@@ -12,6 +12,8 @@ export interface WebCopy {
   switching: string
   models: string
   sendMessage: string
+  attachMedia: string
+  removeMedia: string
   message: string
   placeholder: string
   send: string

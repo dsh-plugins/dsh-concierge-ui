@@ -7,7 +7,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import type { WebAuthRequest, WebAdmission, WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { RegistryPort, TraceEntry } from '@dsh-prism/dsh-orchestrator/core'
-import type { ConversationView } from './conversation.js'
+import type { ConversationView, MediaAsset } from './conversation.js'
 import { documentHtml, faviconPath, stylesheet } from './page.js'
 import { missingReply } from './delivery.js'
 import { openPrismOnLoad } from './navigation.js'
@@ -18,7 +18,10 @@ export const inject = ['webServer']
 /** Keep authentication and state ownership in the host. The browser never supplies an owner. */
 interface ConversationService {
   view(owner: string): Promise<ConversationView>
-  message(owner: string, text: string, requestId?: string): Promise<ConversationView>
+  message(owner: string, text: string, requestId?: string,
+    source?: {channel: string; sender?: string}, attachmentIds?: string[]): Promise<ConversationView>
+  stageMedia?(owner: string, input: {bytes: Uint8Array; mimeType: string; name?: string}): Promise<MediaAsset>
+  readMedia?(owner: string, id: string): Promise<(MediaAsset & {bytes: Uint8Array}) | undefined>
   selectModel(owner: string, id: string): Promise<ConversationView>
   trace(owner: string, taskId: string): Promise<TraceEntry[]>
   subscribe(owner: string, listener: (view: ConversationView) => void): () => void
@@ -37,6 +40,7 @@ const publicPaths = new Set([
   `${api}/message`,
   `${api}/model`,
   `${api}/trace`,
+  `${api}/attachment`,
 ])
 
 export function restrictPublicSurface(request: WebAuthRequest): WebAdmission | undefined {
@@ -54,7 +58,7 @@ const securityHeaders = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'no-referrer',
   'Content-Security-Policy':
-    "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+    "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
 }
 
 function reply(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
@@ -71,29 +75,67 @@ class RequestError extends Error {
   }
 }
 
-async function readBody(request: IncomingMessage): Promise<Record<string, unknown>> {
-  if (request.headers['content-type']?.split(';')[0]?.trim() !== 'application/json')
-    throw new RequestError(415, 'json')
+async function readBytes(request: IncomingMessage, limit: number): Promise<Buffer> {
   const chunks: Buffer[] = []
   let bytes = 0
   for await (const chunk of request.iterator({ destroyOnReturn: false })) {
     const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
     bytes += data.length
-    if (bytes > 256 * 1024) {
+    if (bytes > limit) {
       request.resume()
       throw new RequestError(413, 'tooLong')
     }
     chunks.push(data)
   }
+  return Buffer.concat(chunks)
+}
+
+async function readBody(request: IncomingMessage): Promise<Record<string, unknown>> {
+  if (request.headers['content-type']?.split(';')[0]?.trim() !== 'application/json') {
+    throw new RequestError(415, 'json')
+  }
+  const bytes = await readBytes(request, 256 * 1024)
   let value: unknown
   try {
-    value = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+    value = JSON.parse(bytes.toString('utf8'))
   } catch {
     throw new RequestError(400, 'format')
   }
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new RequestError(400, 'format')
   return value as Record<string, unknown>
+}
+
+const mediaTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime'])
+
+async function attachment(core: ConversationService, owner: string, req: IncomingMessage, res: ServerResponse, url: URL) {
+  if (req.method === 'GET') {
+    const id = requiredString(url.searchParams.get('id'), 128)
+    const asset = await core.readMedia?.(owner, id)
+    if (!asset || !mediaTypes.has(asset.mimeType)) {
+      throw new RequestError(404, 'unavailable')
+    }
+    res.writeHead(200, {...securityHeaders, 'Content-Type': asset.mimeType, 'Content-Length': asset.bytes.byteLength})
+    res.end(asset.bytes)
+    return
+  }
+  if (req.method !== 'POST') {
+    reply(res, 405, {}, {Allow: 'GET, POST'})
+    return
+  }
+  if (req.headers['x-prism-request'] !== '1') {
+    throw new RequestError(403, 'origin')
+  }
+  const mimeType = req.headers['content-type']?.split(';')[0]?.trim() ?? ''
+  if (!mediaTypes.has(mimeType)) {
+    throw new RequestError(415, 'format')
+  }
+  if (!core.stageMedia) {
+    throw new RequestError(503, 'unavailable')
+  }
+  const name = url.searchParams.get('name')?.slice(0, 255)
+  const bytes = await readBytes(req, 16 * 1024 * 1024)
+  reply(res, 201, await core.stageMedia(owner, {bytes, mimeType, name}))
 }
 
 function requiredString(value: unknown, limit: number): string {
@@ -106,6 +148,7 @@ function requiredString(value: unknown, limit: number): string {
 function project(view: ConversationView, copy: WebCopy): ConversationView {
   return {
     modelId: view.modelId,
+    ...(view.mediaEnabled === true && {mediaEnabled: true}),
     models: view.models.map(model => ({
       id: model.id,
       description: model.description,
@@ -117,6 +160,7 @@ function project(view: ConversationView, copy: WebCopy): ConversationView {
       text: message.text,
       at: message.at,
       ...(message.source && {source: {channel: message.source.channel, sender: message.source.sender}}),
+      ...(message.attachments?.length && {attachments: message.attachments.map(({assetId, mimeType, name}) => ({assetId, mimeType, name}))}),
       ...(message.delivery ? { delivery: message.delivery } : {}),
       ...(missingReply(message) ? { deliveryError: 'no_response' as const } : {}),
     })),
@@ -244,13 +288,18 @@ export function createRoutes(
         return
       }
       const write = path === `${api}/message` || path === `${api}/model`
+      const core = getService()
+      if (path === `${api}/attachment`) {
+        if (!core) { throw new RequestError(503, 'starting') }
+        await attachment(core, owner, req, res, url)
+        return
+      }
       const method = write ? 'POST' : 'GET'
       if (req.method !== method) {
         reply(res, 405, {}, { Allow: method })
         return
       }
       if (write && req.headers['x-prism-request'] !== '1') throw new RequestError(403, 'origin')
-      const core = getService()
       if (!core) throw new RequestError(503, 'starting')
       if (path === `${api}/events`) {
         await streamView(core, owner, res, peer.signal, copy)
@@ -270,10 +319,17 @@ export function createRoutes(
         return
       }
       const body = await readBody(req)
-      const view =
-        path === `${api}/model`
-          ? await core.selectModel(owner, requiredString(body.modelId, 256))
-          : await core.message(owner, requiredString(body.text, 32000), requiredString(body.requestId, 128))
+      if (path === `${api}/model`) {
+        reply(res, 200, project(await core.selectModel(owner, requiredString(body.modelId, 256)), copy))
+        return
+      }
+      if (body.attachments !== undefined && (!Array.isArray(body.attachments) || body.attachments.length > 8)) {
+        throw new RequestError(400, 'invalidOption')
+      }
+      const ids = Array.isArray(body.attachments) ? body.attachments.map(id => requiredString(id, 128)) : []
+      const message = ids.length && body.text === '' ? '' : requiredString(body.text, 32000)
+      const id = requiredString(body.requestId, 128)
+      const view = ids.length ? await core.message(owner, message, id, undefined, ids) : await core.message(owner, message, id)
       reply(res, 200, project(view, copy))
     } catch (error) {
       if (res.headersSent) {

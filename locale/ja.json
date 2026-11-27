@@ -17,6 +17,8 @@
     "switching": "モデルを切り替え中…",
     "models": "チャットモデル",
     "sendMessage": "メッセージを送信",
+    "attachMedia": "画像または動画を添付",
+    "removeMedia": "添付を削除",
     "message": "メッセージ",
     "placeholder": "プリズムにメッセージを入力…",
     "send": "送信",

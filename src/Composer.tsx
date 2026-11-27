@@ -1,14 +1,14 @@
 import { copy } from './client-locale.js'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Button, Icon, Popover, Textarea, type TextareaRef } from '@dsh-plugin/dsh-ui-components'
-import type { ConversationView } from '@dsh-prism/dsh-orchestrator/contracts'
+import type { ConversationView } from './conversation.js'
 
 export interface ComposerProps {
   view?: ConversationView
   busy: boolean
   feedback?: string
   onEdit?(): void
-  onSend(text: string, requestId: string): Promise<void>
+  onSend(text: string, requestId: string, files: readonly File[]): Promise<void>
   onSelect(id: string): Promise<void>
 }
 
@@ -25,11 +25,12 @@ function modelLabel(model: ConversationView['models'][number]): string {
 
 export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: ComposerProps) {
   const [draft, setDraft] = useState('')
+  const [files, setFiles] = useState<File[]>([])
   const [open, setOpen] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
   const menu = useRef<HTMLDivElement>(null)
   const input = useRef<TextareaRef>(null)
-  const pending = useRef<{ text: string; id: string } | null>(null)
+  const pending = useRef<{text: string; id: string; files: readonly File[]} | null>(null)
   const inFlight = useRef(false)
   const unavailable = !view?.models.length || busy
   const selectedModel = view?.models.find(model => model.id === view.modelId)
@@ -107,13 +108,16 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
   }
   async function submit() {
     const text = draft.trim()
-    if (!text || !view || busy || inFlight.current) return
-    if (pending.current?.text !== text) pending.current = { text, id: requestId() }
+    if ((!text && !files.length) || !view || busy || inFlight.current) { return }
+    if (pending.current?.text !== text || pending.current.files !== files) {
+      pending.current = {text, id: requestId(), files}
+    }
     inFlight.current = true
     try {
-      await onSend(text, pending.current.id)
+      await onSend(text, pending.current.id, files)
       pending.current = null
       setDraft((current) => (current.trim() === text ? '' : current))
+      setFiles([])
       input.current?.focus()
     } catch {
       /* Keep the draft and id for retries after an uncertain acknowledgement. */
@@ -185,6 +189,24 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
               void submit()
             }}
           />
+          {view?.mediaEnabled && (
+            <div className="attach-files">
+              <label>
+                <span>{copy.attachMedia}</span>
+                <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                  disabled={busy} onChange={event => {
+                    setFiles(current => [...current, ...Array.from(event.currentTarget.files ?? [])].slice(0, 8))
+                    event.currentTarget.value = ''
+                    onEdit?.()
+                  }} />
+              </label>
+              {files.map((file, index) => <Button key={file.name + index} size="sm" variant="text" disabled={busy}
+                title={copy.removeMedia} aria-label={copy.removeMedia + ' ' + file.name}
+                onClick={() => setFiles(current => current.filter((_, position) => index !== position))}>
+                {file.name} <span aria-hidden="true">×</span>
+              </Button>)}
+            </div>
+          )}
           <div className="composer-foot">
             <span className="key-hint">
               <kbd>Enter</kbd> {copy.send} <span>·</span> <kbd>Shift + Enter</kbd> {copy.newline}
@@ -227,7 +249,7 @@ export function Composer({ view, busy, feedback, onSend, onSelect, onEdit }: Com
               aria-label={copy.sendMessage}
               title={copy.sendMessage}
               type="submit"
-              disabled={!view || busy || !draft.trim()}
+              disabled={!view || busy || (!draft.trim() && !files.length)}
             >
               <Icon name="Send" size={17} aria-hidden="true" />
             </button>

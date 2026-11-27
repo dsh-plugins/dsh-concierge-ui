@@ -43,7 +43,13 @@ function Message({ item }: { item: PublicMessage }) {
       </span>
       {assistant ? <div className="prism-markdown">
         <Markdown skipHtml remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>{item.text}</Markdown>
-      </div> : <p>{item.text}</p>}
+      </div> : item.text && <p>{item.text}</p>}
+      {item.attachments?.map(asset => {
+        const src = '/prism/api/attachment?' + new URLSearchParams({id: asset.assetId})
+        return asset.mimeType.startsWith('image/')
+          ? <img key={asset.assetId} className="message-media" loading="lazy" src={src} alt={asset.name ?? copy.attachMedia} />
+          : <video key={asset.assetId} className="message-media" preload="metadata" controls src={src} aria-label={asset.name ?? copy.attachMedia} />
+      })}
       {!assistant && item.delivery === 'pending' && <span className="time">{copy.processing}</span>}
       {!assistant && item.delivery === 'failed' &&
         <span className="time">{missingReply(item) ? copy.noResponse : copy.processFailed}</span>}
