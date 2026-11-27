@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { DshMenu, Icon } from '@dsh-plugin/dsh-loader/client'
 import { admin, AdminError, editedFields, fields, publicFields, savedSecrets, type Channel, type ChannelView, type FeishuMode } from './im-admin.js'
 import type { ImCopy } from './im-copy.js'
 import { FeishuBinding } from './FeishuBinding.js'
@@ -216,6 +217,7 @@ function ChannelForm({ view, copy, update, reload, cancel }: {
 
 export function ImSettings({ copy }: {copy: ImCopy}) {
   const [editing, setEditing] = useState<Channel>()
+  const [addMenu, setAddMenu] = useState<'top' | 'bottom'>()
   const [views, setViews] = useState<ChannelView[]>()
   const [readError, setReadError] = useState('')
   const [refresh, setRefresh] = useState(0)
@@ -269,17 +271,24 @@ export function ImSettings({ copy }: {copy: ImCopy}) {
   return <section style={{ ...ui.stack, maxWidth: 620, padding: '8px 0 20px' }}>
     <h2 style={{ margin: 0 }}>{copy.title}</h2>
     {!!available.length && <div>
-      <select aria-label={copy.add} value="" style={ui.channelSelect} disabled={Boolean(view)} onChange={event => {
-        const choice = available.find(({ channel }) => channel === event.currentTarget.value)
-        if (choice) {
-          setEditing(choice.channel)
-        }
-      }}>
-        <option value="" disabled>{copy.add}</option>
-        <optgroup label={copy.channel}>
-          {available.map(({ channel }) => <option key={channel} value={channel}>{copy.names[channel]}</option>)}
-        </optgroup>
-      </select>
+      <DshMenu portal maxRows={7} open={addMenu !== undefined && !view} side={addMenu}
+        items={available.map(({ channel }) => ({id: channel, label: copy.names[channel]}))}
+        onClose={() => setAddMenu(undefined)} onSelect={id => {
+          setAddMenu(undefined)
+          const choice = available.find(({ channel }) => channel === id)
+          if (choice && !view) {
+            setEditing(choice.channel)
+          }
+        }}
+        anchor={<button type="button" style={{...ui.menuButton, cursor: view ? 'not-allowed' : 'pointer', opacity: view ? 0.55 : 1}}
+          disabled={Boolean(view)} aria-haspopup="menu"
+          aria-expanded={addMenu !== undefined && !view} onClick={event => {
+            const rect = event.currentTarget.getBoundingClientRect()
+            const below = window.innerHeight - rect.bottom
+            setAddMenu(addMenu === undefined ? below < Math.min(260, rect.top) ? 'top' : 'bottom' : undefined)
+          }}>
+          {copy.add}<Icon name="ChevronDown" size={14} />
+        </button>} />
     </div>}
     {readError && <p role="alert">{readError}</p>}
     {!views && !readError && <p role="status">{copy.loading}</p>}
